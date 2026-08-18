@@ -1,5 +1,17 @@
 # README
 
+## 20260814
+The best starting point is to build the database layer and core data structures first, followed by the Go API layer, and finally the Angular app. Following a backend-first, data-driven approach ensures architecture remains stable.
+
+Building the database layer first (before the API endpoints) ensures we don't accidentally design an API that is impossible or highly inefficient to query. This is known as Data Modeling. Why it protects app architecture:
+1. Database constraints dictate business rules. Avoid writing redundant or conflicting validation logic in Go that DB might reject anyway;
+2. Avoid N + 1 Query performance trap, when we can optimize query, e.g. using joins, to fetch data efficiently;
+3. Clear separation of "Storage Models" vs. "API Models". What is stored in DB should not always match what is being sent to the front end.
+
+### Phases
+Step 1: Simple CRUD Monolith ──> Step 2: Complex Frontend State ──> Step 3: Real-Time WebSockets
+(Create, read, update, delete)  (Angular Signals + Drag & Drop)     (Go Goroutines & Channels)
+
 ## Initial Directories Structure
 kanban/
 │

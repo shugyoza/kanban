@@ -33,3 +33,17 @@ type TaskModel struct {
 	CreatedAt   time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updatedAt"`
 }
+
+// Representing clean tree structure in domain layer that matches the exact tree structure the UI needs.
+type BoardAggregate struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+	Columns []ColumnAggregate `json:"columns"`
+}
+
+type ColumnAggregate struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+	Position int `json:"position"`
+	Tasks []TaskModel `json:"tasks"`
+}

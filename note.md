@@ -22,6 +22,12 @@ Building the database layer first (before the API endpoints) ensures we don't ac
 Step 1: Simple CRUD Monolith ──> Step 2: Complex Frontend State ──> Step 3: Real-Time WebSockets
 (Create, read, update, delete)  (Angular Signals + Drag & Drop)     (Go Goroutines & Channels)
 
+We initialized the project with modular monolith to maximize development velocity and eliminate - 
+unnecessary network overhead. However, we decoupled the data access layer, business logic, and -
+transport layer using Hexagonal Architecture, to ensure that if any domain module experiences - 
+unique scaling bottlenecks in the future, it can be seamlessly broken out into a microservice -
+without rewriting the core application.
+
 ## Initial Directories Structure
 kanban/
 │

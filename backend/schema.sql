@@ -1,7 +1,7 @@
 -- 1. Boards Table
 CREATE TABLE
   boards (
-    id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY, -- UUID for board identification
     title VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
@@ -19,7 +19,7 @@ CREATE TABLE
 
 -- 3. Tasks Table (the individual cards within columns)
 CREATE TABLE tasks (
-    id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY, -- UUID for task identification
     column_id VARCHAR(36) NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,

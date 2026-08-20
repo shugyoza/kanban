@@ -4,9 +4,9 @@ them into the clean nested BoardAggregate tree that the frontend expects. */
 package usecase
 
 import (
+	"backend/internal/domain"
 	"context"
 	"fmt"
-	"kanban/internal/domain"
 )
 
 type KanbanInteractor struct {
@@ -21,7 +21,7 @@ func NewKanbanInteractor(repo domain.BoardRepository) *KanbanInteractor {
 // GetBoardDetails orchestrates the data retrieval and formats the nested tree
 func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
 	//  1.  Fetch the raw modles from the database repository layer
-	boardModel, columnModels, taskModels, err := uc.repo.GetBoardDetails(ctx, boardID)
+	boardModel, columnModels, taskModels, err := uc.repo.GetBoardTree(ctx, boardID)
 	if err != nil {
 		return nil, fmt.Errorf("usecase failed to get board details: %w", err)
 	}
@@ -32,9 +32,15 @@ func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string)
 	}
 
 	// 3. Map tasks into a fast-lookup map grouped by column ID
-	taskMap := make(map[string][]domain.TaskModel)
+	taskMap := make(map[string][]domain.Task)
 	for _, task := range taskModels {
-		taskMap[task.ColumnID] = append(taskMap[task.ColumnID], task)
+		taskMap[task.ColumnID] = append(taskMap[task.ColumnID], domain.Task{
+			ID:       task.ID,
+			Title:    task.Title,
+			Description: task.Description,
+			Position: task.Position,
+			ColumnID: task.ColumnID,
+		})
 	}
 
 	// 4. Assemble the nested ColumnAggregates
@@ -43,7 +49,7 @@ func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string)
 		// Find any task that belongs to this specific column (default to empty slice if none)
 		tasks := taskMap[column.ID]
 		if (tasks == nil) {
-			tasks = []domain.TaskModel{} // if no tasks exist for this column, ensure we return an empty JSON array instead of null
+			tasks = []domain.Task{} // if no tasks exist for this column, ensure we return an empty JSON array instead of null
 		}
 
 		columnAggregates = append(columnAggregates, domain.ColumnAggregate{

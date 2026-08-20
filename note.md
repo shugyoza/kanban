@@ -1,5 +1,21 @@
 # Note
 
+## 20260820
+Unit testing passed.
+```txt
+backend % go test ./internal/usecase/... -v          
+=== RUN   TestGetBoardDetails_Success
+--- PASS: TestGetBoardDetails_Success (0.00s)
+PASS
+ok      backend/internal/usecase        (cached)
+```
+
+Application is running
+```txt
+backend % go run cmd/api/main.go           
+2026/08/20 16:57:34 Database connection established successfully.
+```
+
 ## 20260819
 While Go naturally uses PascalsCase and databases use snake_case, JSON keys represent the public contract with FrontEnd. Keeping JSON in camelCase ensures a clean separation of concerns and prevents style mismatches across application stack. 
 

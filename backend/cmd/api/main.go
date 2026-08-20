@@ -2,19 +2,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
+	"time"
 
-	// Swap the driver import when we are ready for Postgres. For now, we are using SQLite for simplicity.
-	_ "://sqlite3"
-	_ "://postgres"
+	_ "modernc.org/sqlite" // SQLite driver
 )
 
 func main() {
 	// 1. Initialize the pool structure (validates syntax only)
 
 	// SQLite Local File Connection
-	db, err := sql.Open("sqlite3", "./kanban.db")
+	db, err := sql.Open("sqlite", "./kanban.db")
 
 	// PostgreSQL Connection. - sslmode=disable is used for local development. In production, you should use sslmode=require or verify-full with proper certificates.
 	// db, err := sql.Open("postgres", "user=postgres dbname=kanban sslmode=verify-full")

@@ -3,8 +3,36 @@
 package domain
 
 import (
+	"backend/internal/repository"
 	"context"
 )
+
+// Representing clean tree structure in domain layer that matches the exact tree structure the UI needs.
+type BoardAggregate struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+	Columns []ColumnAggregate `json:"columns"`
+}
+
+type ColumnAggregate struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+	Position int `json:"position"`
+	Tasks []Task `json:"tasks"`
+}
+
+// Task represents a single task in the Kanban board.
+type Task struct {
+	ID string `json:"id"`
+	ColumnID string `json:"columnId"`
+	Title string `json:"title"`
+	Description string `json:"description"`
+	Position int `json:"position"`
+}
+
+type BoardRepository interface {
+	GetBoardTree(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error)
+}
 
 // KanbanUseCase defines the business rules available for the Kanban board.
 type KanbanUseCase interface {

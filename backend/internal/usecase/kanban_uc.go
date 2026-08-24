@@ -1,5 +1,17 @@
-/* Calls the database repository method , loops through the flat rows, and packages -
-them into the clean nested BoardAggregate tree that the frontend expects. */
+/*
+Calls the database repository method , loops through the flat rows, and packages them into the clean nested BoardAggregate tree that the frontend expects.
+
+In Hexagonal (Ports and Adapters) and Clean Architecture, this is the "UseCase Interactor" layer that sits between the delivery layer (HTTP Handler) and the data access layer (Repository).
+It orchestrates the business logic and data transformation, and represent a single use case of the application (in this case, "GetBoardDetails").
+
+Core Responsibilities of an Interactor:
+* Orchestrate the flow of data between the delivery layer and the repository layer.
+* Execute One Use Case: It represents a specific user action (e.g., "GetBoardDetails").
+* Enforce business rules and validation (e.g., check if board exists).
+* Transform raw data models into a format suitable for the delivery layer (e.g., nested aggregates).
+* Handle errors and propagate them back to the delivery layer in a meaningful way.
+* Remains technology-agnostic: It doesn't know about HTTP, JSON, or any specific database technology. It only knows about the domain models and interfaces.
+*/
 
 package usecase
 

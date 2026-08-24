@@ -1,4 +1,10 @@
 // App entry point (wires up DB, UseCases, & Handlers)
+
+/*
+Note 1:
+The `defer db.Close()` and `defer cancel()` statements ensure that resources are released properly when the main function exits.
+This is important for preventing resource leaks (leak db connection or leave orphaned system), especially in long-running applications.
+*/
 package main
 
 import (
@@ -22,11 +28,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Critical: Invalid database configuration %v", err)
 	}
-	defer db.Close()
+	defer db.Close() // See note 1.
 
-	// 2. Enforce a timeout context to verify the actual connection. 3 seconds instead of 2 seconds to allow for some latency in the connection.
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	// 2. Enforce a timeout context to verify the actual connection. 
+	defensiveTimingChecks := 3 * time.Second // 3 seconds instead of 2 seconds to allow for some latency (e.g. absorb standard disk or network hiccups without causing a false alarm crash during booting) in the connection.
+	ctx, cancel := context.WithTimeout(context.Background(), defensiveTimingChecks)
+	defer cancel() // See note 1.
 
 	// 3. Ping the database to ensure the connection is valid and reachable.
 	if err := db.PingContext(ctx); err != nil {

@@ -8,9 +8,13 @@ This is important for preventing resource leaks (leak db connection or leave orp
 package main
 
 import (
+	"backend/internal/handler"
+	"backend/internal/repository"
+	"backend/internal/usecase"
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"time"
 
 	_ "modernc.org/sqlite" // SQLite driver
@@ -41,4 +45,25 @@ func main() {
 	}
 
 	log.Println("Database connection established successfully.")
+
+	// 1. Initialize the innermost layer (DB Repository plugin)
+	kanbanRepo := repository.NewSQLBoardRepository(db)
+
+	// 2. Inject the repository into the Business Logic layer (UseCase Interactor)
+	kanbanUseCase := usecase.NewKanbanInteractor(kanbanRepo)
+
+	// 3. Inject the UseCase into the Outer Delivery Layer (HTTP Handler Plug)
+	kanbanHandler := handler.NewKanbanHandler(kanbanUseCase)
+
+	// Map handler's method to a real web URL path endpoint
+	http.HandleFunc("/api/boards", kanbanHandler.GetBoard)
+
+	serverPort := ":8080"
+	// Fire up the native Go local web server
+	log.Printf("Kanban backend server is listening at http://localhost%s\n", serverPort)
+
+	if err := http.ListenAndServe(serverPort, nil); err != nil {
+		log.Fatalf("Critical: Web server failed to start %v", err)
+	}
+
 }

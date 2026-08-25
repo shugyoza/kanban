@@ -32,7 +32,7 @@ func NewKanbanInteractor(repo domain.BoardRepository) *KanbanInteractor {
 
 // GetBoardDetails orchestrates the data retrieval and formats the nested tree
 func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
-	//  1.  Fetch the raw modles from the database repository layer
+	//  1.  Fetch the raw models from the database repository layer
 	boardModel, columnModels, taskModels, err := uc.repo.GetBoardTree(ctx, boardID)
 	if err != nil {
 		return nil, fmt.Errorf("usecase failed to get board details: %w", err)

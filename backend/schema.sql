@@ -1,5 +1,5 @@
 -- 1. Boards Table
-CREATE TABLE
+CREATE TABLE IF NOT EXISTS
   boards (
     id VARCHAR(36) PRIMARY KEY, -- UUID for board identification
     title VARCHAR(100) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE
   );
 
 -- 2. Columns Table (To Do, In Progress, Done)
-CREATE TABLE
+CREATE TABLE IF NOT EXISTS
   columns (
     id VARCHAR(36) PRIMARY KEY,
     board_id VARCHAR(36) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE
   );
 
 -- 3. Tasks Table (the individual cards within columns)
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id VARCHAR(36) PRIMARY KEY, -- UUID for task identification
     column_id VARCHAR(36) NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -28,3 +28,10 @@ CREATE TABLE tasks (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (column_id) REFERENCES columns (id) ON DELETE CASCADE
   );
+
+-- seed a mock board to test pulling real data
+INSERT OR IGNORE INTO boards (id, title) VALUES ('board-1', 'Downtime Project Board');
+
+INSERT OR IGNORE INTO columns (id, board_id, title, position) VALUES ('col-1', 'board-1', 'To Do', 0);
+
+INSERT OR IGNORE INTO tasks (id, column_id, title, description, position) VALUES ('task-1', 'col-1', 'Build Angular UI', 'Kickstart front-end workspace', 0);

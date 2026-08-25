@@ -7,11 +7,13 @@ import (
 	"context"
 )
 
-// Representing clean tree structure in domain layer that matches the exact tree structure the UI needs.
-type BoardAggregate struct {
+// Task represents a single task in the Kanban board.
+type Task struct {
 	ID string `json:"id"`
+	ColumnID string `json:"columnId"`
 	Title string `json:"title"`
-	Columns []ColumnAggregate `json:"columns"`
+	Description string `json:"description"`
+	Position int `json:"position"`
 }
 
 type ColumnAggregate struct {
@@ -21,13 +23,11 @@ type ColumnAggregate struct {
 	Tasks []Task `json:"tasks"`
 }
 
-// Task represents a single task in the Kanban board.
-type Task struct {
+// Representing clean tree structure in domain layer that matches the exact tree structure the UI needs.
+type BoardAggregate struct {
 	ID string `json:"id"`
-	ColumnID string `json:"columnId"`
 	Title string `json:"title"`
-	Description string `json:"description"`
-	Position int `json:"position"`
+	Columns []ColumnAggregate `json:"columns"`
 }
 
 type BoardRepository interface {

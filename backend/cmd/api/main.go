@@ -15,6 +15,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	_ "modernc.org/sqlite" // SQLite driver
@@ -45,6 +46,18 @@ func main() {
 	}
 
 	log.Println("Database connection established successfully.")
+
+
+	schemaBytes, err := os.ReadFile("./schema.sql")
+	if err != nil {
+		log.Fatalf("Critical: Failed to read schema.sql file: %v", err)
+	}
+
+	if _, err := db.Exec(string(schemaBytes)); err != nil {
+		log.Fatalf("Critical: Failed to execute schema.sql migration: %v", err)
+	}
+
+	log.Println("Database tables and seed data initialized from schema.sql.")
 
 	// 1. Initialize the innermost layer (DB Repository plugin)
 	kanbanRepo := repository.NewSQLBoardRepository(db)

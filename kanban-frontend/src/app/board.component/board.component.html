@@ -1,0 +1,41 @@
+@let board = kanbanService.board();
+
+<section class="board-container">
+    @if (!kanbanService.isLoaded()) {
+        <div class="loading-spinner">
+            Connecting to Go backend, loading workspace...
+        </div>
+    } @else {
+        <h1 class="board-title">
+            {{ board?.title }}
+        </h1>
+
+        <div class="columns-wrapper">
+            @for (column of board?.columns; track column.id) {
+                <div class="column-card">
+                    <h2 class="column-title">
+                        {{ column.title }}
+                    </h2>
+
+                    <div class="tasks-list">
+                        @for (task of column.tasks; track task.id) {
+                            <div class="task-item">
+                                <h3 class="task-title">
+                                    {{ task.title }}
+                                </h3>
+                                <p class="task-desc">
+                                    {{ task.description }}
+                                </p>
+                            </div>
+                        }
+                        @empty {
+                            <div class="empty-column-msg">
+                                No tasks here yet. Drop cards here!
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>

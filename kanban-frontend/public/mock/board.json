@@ -1,0 +1,20 @@
+{
+    "id": "board-1",
+    "title": "Test Kanban Board",
+    "columns": [
+        {
+            "id": "col-1",
+            "title": "To Do",
+            "position": 0,
+            "tasks": [
+                {
+                    "id": "task-1",
+                    "columnId": "col-1",
+                    "title": "Task 1",
+                    "description": "Desc 1",
+                    "position": 0
+                }
+            ]
+        }
+    ]
+}

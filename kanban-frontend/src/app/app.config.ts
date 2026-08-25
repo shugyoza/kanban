@@ -6,5 +6,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes)
+
+    // ONLY include this if you are actively passing custom feature arguments!
+    // provideHttpClient(withInterceptors([authInterceptor])) 
   ]
 };

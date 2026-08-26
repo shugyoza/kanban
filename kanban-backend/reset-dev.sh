@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# DO NOT use in production!
+
 # Exit instantly if any subcommand throws an unexpected fault code
 set -e
 

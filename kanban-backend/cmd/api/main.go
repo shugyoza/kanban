@@ -57,7 +57,16 @@ func main() {
 		log.Fatalf("Critical: Failed to execute schema.sql migration: %v", err)
 	}
 
-	log.Println("Database tables and seed data initialized from schema.sql.")
+	seederBytes, err := os.ReadFile("./seeder.sql")
+	if err != nil {
+		log.Fatalf("Critical: Failed to read seeder.sql file: %v", err)
+	}
+
+	if _, err = db.Exec(string(seederBytes)); err != nil {
+		log.Fatalf("Critical: Failed to execute seeder.sql migration: %v", err)
+	}
+
+	log.Println("Database tables initialized from schema.sql and seeded from seeder.sql.")
 
 	// 1. Initialize the innermost layer (DB Repository plugin)
 	kanbanRepo := repository.NewSQLBoardRepository(db)

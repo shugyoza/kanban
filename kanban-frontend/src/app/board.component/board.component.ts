@@ -13,7 +13,7 @@ export class BoardComponent implements OnInit {
   protected kanbanService = inject(KanbanService)
 
   ngOnInit(): void {
-    this.kanbanService.loadBoard('board-1')
+    this.kanbanService.loadBoard('board-kanban-1')
   }
 
   // Method that handles pointer drag drop operations natively

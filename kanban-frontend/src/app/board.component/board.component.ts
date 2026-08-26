@@ -16,7 +16,19 @@ export class BoardComponent implements OnInit {
     this.kanbanService.loadBoard('board-1')
   }
 
+  // Method that handles pointer drag drop operations natively
   protected onCardDropped(event: CdkDragDrop<Task[]>): void {
+    // If card was picked up and dropped back into its exact starting container slot index, skip processing
+    if (event.previousContainer === event.container && event.previousIndex === event.currentIndex) {
 
+      return;
+    }
+
+    console.log({
+      fromIndex: event.previousIndex,
+      toIndex: event.currentIndex,
+      fromContainerData: event.previousContainer.data,
+      toContainerData: event.container.data
+    })
   }
 }

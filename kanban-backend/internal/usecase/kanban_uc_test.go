@@ -14,11 +14,17 @@ import (
 // 1. Define the Mock Repository struct
 type mockBoardRepository struct {
 	mockGetBoardTree func(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error)
+
+	mockUpdateTaskPositions func(ctx context.Context, taskID string, targetColumnID string, targetPosition int)
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
 func (m *mockBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error) {
 	return m.mockGetBoardTree(ctx, boardID)
+}
+
+func (m *mockBoardRepository) UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
+	return nil
 }
 
 // 3. The unit test function

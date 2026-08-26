@@ -94,3 +94,80 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 
 	return &board, columns, tasks, nil
 }
+
+func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
+	// 1. Initialize a strict ACID db transaction block
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start database index transaction: %w", err)
+	}
+
+	// Defer a rollback safety mechanism. If tx.Commit() is executed successfully, this becomes a safe no-op.
+	defer tx.Rollback()
+
+	// 2. Fetch the task's current column tracking metadata before the move
+	var currentColumnID string
+	var currentPosition int
+	err = tx.QueryRowContext(ctx, "SELECT column_id, position FROM tasks WHERE id = $1", taskID).Scan(&currentColumnID, &currentPosition)
+	if err != nil {
+		return fmt.Errorf("failed to trace targeted task: %w", err)
+	}
+
+	// 3. Re-order items based on whether it moved columns or stayed within the same column
+	if currentColumnID == targetColumnID {
+		// Moving within the same column lane
+		if (currentPosition < targetPosition) {
+			// shifting down: push intermediate cards up
+			_, err = tx.ExecContext(
+				ctx, 
+				"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND position <= $3", 
+				targetColumnID, currentPosition, targetPosition,
+			)
+		} else if currentPosition > targetPosition {
+			// shifting up: push intermediate cards down
+			_, err = tx.ExecContext(
+				ctx,
+				"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND position < $3",
+				targetColumnID, targetPosition, currentPosition,
+			)
+		}
+	} else {
+		// Moving across columns: clear the gap in the old column lane
+		_, err = tx.ExecContext(
+			ctx,
+			"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2",
+			currentColumnID, currentPosition,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to re-index source column lane: %w", err)
+		}
+
+		// open up a placeholder index slot in the new target column lane
+		_, err = tx.ExecContext(
+			ctx,
+			"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2",
+			targetColumnID, targetPosition,
+		)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to adjust intermediate card positions: %w", err)
+	}
+
+	// 4. Update target card to point to its new column and destination position index
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE tasks SET column_id = $1, position = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+		targetColumnID, targetPosition, taskID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to write updated target task metrics: %w", err)
+	}
+
+	// 5. Explicitly commit the transaction permanently to disk file storage
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to finalize task move transaction: %w", err)
+	}
+
+	return nil
+}

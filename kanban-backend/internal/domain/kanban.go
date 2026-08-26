@@ -32,6 +32,8 @@ type BoardAggregate struct {
 
 type BoardRepository interface {
 	GetBoardTree(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error)
+
+	UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 }
 
 // KanbanUseCase defines the business rules available for the Kanban board.

@@ -19,7 +19,7 @@
                     </h2>
 
                     <!-- 2. Turn this container into a registered list drop zone -->
-                    <div class="tasks-list" cdkDropList [cdkDropListData]="column.tasks" (cdkDropListDropped)="onCardDropped($event)">
+                    <div class="tasks-list" cdkDropList [id]="column.id" [cdkDropListData]="column.tasks" (cdkDropListDropped)="onCardDropped($event)">
                         @for (task of column.tasks; track task.id) {
                             <!-- 3. Mark each separate item container as an independently draggable card node -->
                             <div class="task-item" cdkDrag>

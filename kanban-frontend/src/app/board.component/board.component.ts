@@ -18,35 +18,31 @@ export class BoardComponent implements OnInit {
 
   // Method that handles pointer drag drop operations natively
   protected onCardDropped(event: CdkDragDrop<Task[]>): void {
+    const column = {
+      from: event.previousContainer.id,
+      to: event.container.id
+    }
+    const row = {
+      from: event.previousIndex,
+      to: event.currentIndex
+    }
+    const data = {
+      from: event.previousContainer.data,
+      to: event.container.data
+    }
     // If card was picked up and dropped back into its exact starting container slot index, skip processing
-    if (event.previousContainer === event.container && event.previousIndex === event.currentIndex) {
+    if (column.from === column.to && row.from === row.to) {
 
       return;
     }
 
-    // Extract db id properties embedded inside the CDK container boundaries
-    const fromColumnId = event.previousContainer.id;
-    const toColumnId = event.container.id;
-    const fromIndex = event.previousIndex;
-    const toIndex = event.currentIndex;
-
-    // Log movements for developing purpose. To clean up later
-    console.log({
-      fromColumnId,
-      toColumnId,
-      fromIndex,
-      toIndex,
-      fromContainerData: event.previousContainer.data,
-      toContainerData: event.container.data
-    })
-
+    // Log movements for developing purpose. TODO: clean up later
+    console.log(column, row, data)
 
     // Pass the indices down to state store orchestrator service layer
     this.kanbanService.moveTask(
-      fromColumnId,
-      toColumnId,
-      fromIndex,
-      toIndex
+      column,
+      row
     )
   }
 }

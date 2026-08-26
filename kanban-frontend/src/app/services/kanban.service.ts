@@ -26,39 +26,49 @@ export class KanbanService {
     }
 
     public moveTask(
-        fromColumnId: string,
-        toColumnId: string,
-        fromIndex: number,
-        toIndex: number
+        column: {
+            from: string;
+            to: string;
+        },
+        row: {
+            from: number;
+            to: number;
+        }
     ): void {
         const currentBoard = this.boardState();
 
         if (!currentBoard) return;
 
         // 1. Deep copy the columns array to safely maintain immutability principles
-        const updatedColumns = currentBoard.columns.map(column => ({
-            ...column,
-            tasks: [...column.tasks]
+        const updatedColumns = currentBoard.columns.map(_column => ({
+            ..._column,
+            tasks: [..._column.tasks]
         }))
 
-        const sourceColumn = updatedColumns.find(column => column.id === fromColumnId);
-        const targetColumn = updatedColumns.find(column => column);
+        const sourceColumn = updatedColumns.find(_column => _column.id === column.from);
+        const targetColumn = updatedColumns.find(_column => _column.id === column.to);
+
+        // TODO: clean up
+        console.log({
+            sourceColumn,
+            targetColumn
+        })
 
         if (!sourceColumn || !targetColumn) return;
 
         // 2. Extract the target task being moved
-        const [movedTask] = sourceColumn.tasks.splice(fromIndex, 1);
+        const [movedTask] = sourceColumn.tasks.splice(row.from, 1);
         if (!movedTask) return;
 
         // 3. Update the task's column reference identifier
-        movedTask.columnId = toColumnId;
+        movedTask.columnId = column.to;
 
         // Inject the task into its new index position slot
-        targetColumn.tasks.splice(toIndex, 0, movedTask)
+        targetColumn.tasks.splice(row.to, 0, movedTask)
 
         // 5. Recalculate the sequential 'position' index property for both altered columns
         sourceColumn.tasks.forEach((task, index) => (task.position = index));
-        if (fromColumnId !== toColumnId) {
+        if (column.from !== column.to) {
             targetColumn.tasks.forEach((task, index) => (task.position = index))
         }
 
@@ -69,6 +79,6 @@ export class KanbanService {
         })
 
         // 7. TODO: Trigger non blocking HTTP PATCH/PUT request to update the Go backend db persistence layer
-        console.log(`Backend Synchronization Primed: Task ${movedTask.id} shifted to column ${toColumnId} at position ${toIndex}`)
+        console.log(`Backend Synchronization Primed: Task ${movedTask.id} shifted to column ${column.to} at position ${row.to}`)
     }
 }

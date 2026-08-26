@@ -79,3 +79,26 @@ func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string)
 		Columns: columnAggregates,
 	}, nil
 }
+
+func (uc *KanbanInteractor) MoveTask(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
+	// 1. Enforce strict data input validations
+	if taskID == "" {
+		return fmt.Errorf("business rule violation: task ID cannot be empty")
+	}
+
+	if targetColumnID == "" {
+		return fmt.Errorf("business rule violation: target column ID cannot be empty")
+	}
+
+	if targetPosition < 0 {
+		return fmt.Errorf("business rule violation: position index cannot be negative")
+	}
+
+	// 2. Delegate the data execution safely to your SQL transaction repository port
+	err := uc.repo.UpdateTaskPositions(ctx, taskID, targetColumnID, targetPosition)
+	if err != nil {
+		return fmt.Errorf("usecase failed to execute task move: %w", err)
+	}
+
+	return nil
+}

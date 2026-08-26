@@ -24,11 +24,29 @@ export class BoardComponent implements OnInit {
       return;
     }
 
+    // Extract db id properties embedded inside the CDK container boundaries
+    const fromColumnId = event.previousContainer.id;
+    const toColumnId = event.container.id;
+    const fromIndex = event.previousIndex;
+    const toIndex = event.currentIndex;
+
+    // Log movements for developing purpose. To clean up later
     console.log({
-      fromIndex: event.previousIndex,
-      toIndex: event.currentIndex,
+      fromColumnId,
+      toColumnId,
+      fromIndex,
+      toIndex,
       fromContainerData: event.previousContainer.data,
       toContainerData: event.container.data
     })
+
+
+    // Pass the indices down to state store orchestrator service layer
+    this.kanbanService.moveTask(
+      fromColumnId,
+      toColumnId,
+      fromIndex,
+      toIndex
+    )
   }
 }

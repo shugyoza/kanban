@@ -47,7 +47,6 @@ func main() {
 
 	log.Println("Database connection established successfully.")
 
-
 	schemaBytes, err := os.ReadFile("./schema.sql")
 	if err != nil {
 		log.Fatalf("Critical: Failed to read schema.sql file: %v", err)
@@ -57,11 +56,13 @@ func main() {
 		log.Fatalf("Critical: Failed to execute schema.sql migration: %v", err)
 	}
 
-	seederBytes, err := os.ReadFile("./seeder.sql")
+	var seederBytes []byte
+	seederBytes, err = os.ReadFile("./seeder.sql")
 	if err != nil {
 		log.Fatalf("Critical: Failed to read seeder.sql file: %v", err)
 	}
 
+	// using = instead of := as we are re-using _ and err vars.
 	if _, err = db.Exec(string(seederBytes)); err != nil {
 		log.Fatalf("Critical: Failed to execute seeder.sql migration: %v", err)
 	}

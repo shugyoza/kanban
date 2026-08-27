@@ -80,6 +80,7 @@ func main() {
 
 	// Map handler's method to a real web URL path endpoint
 	http.HandleFunc("/api/boards", kanbanHandler.GetBoard)
+	http.HandleFunc("/api/tasks/move", kanbanHandler.MoveTask)
 
 	serverPort := ":8080"
 	// Fire up the native Go local web server

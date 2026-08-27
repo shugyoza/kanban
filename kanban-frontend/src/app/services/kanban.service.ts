@@ -38,15 +38,18 @@ export class KanbanService {
         const currentBoard = this.boardState();
 
         if (!currentBoard) return;
+        
+        // A. CAPTURE SNAPSHOT: Store a copy of the exact starting state in case server fails
+        const rollbackSnapshot = { ...currentBoard };
 
         // 1. Deep copy the columns array to safely maintain immutability principles
-        const updatedColumns = currentBoard.columns.map(_column => ({
-            ..._column,
-            tasks: [..._column.tasks]
+        const updatedColumns = currentBoard.columns.map(c => ({
+            ...c,
+            tasks: [...c.tasks]
         }))
 
-        const sourceColumn = updatedColumns.find(_column => _column.id === column.from);
-        const targetColumn = updatedColumns.find(_column => _column.id === column.to);
+        const sourceColumn = updatedColumns.find(c => c.id === column.from);
+        const targetColumn = updatedColumns.find(c => c.id === column.to);
 
         // TODO: clean up
         console.log({
@@ -80,5 +83,23 @@ export class KanbanService {
 
         // 7. TODO: Trigger non blocking HTTP PATCH/PUT request to update the Go backend db persistence layer
         console.log(`Backend Synchronization Primed: Task ${movedTask.id} shifted to column ${column.to} at position ${row.to}`)
+
+        const payload = {
+            taskId: movedTask.id,
+            targetColumnId: column.to,
+            targetPosition: row.to
+        }
+
+        this.http.put('/api/tasks/move', payload).pipe(
+            catchError(err => {
+                console.error(err);
+                alert('Could not save card position. Checking database link...')
+
+                // revert the state signal back
+                this.boardState.set(rollbackSnapshot);
+
+                return of(null);
+            })
+        ).subscribe();
     }
 }

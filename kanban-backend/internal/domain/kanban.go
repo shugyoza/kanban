@@ -34,6 +34,8 @@ type BoardRepository interface {
 	GetBoardTree(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error)
 
 	UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
+
+	InsertTask(ctx context.Context, columnID string, title string, description string) (*Task, error)
 }
 
 // KanbanUseCase defines the business rules available for the Kanban board.
@@ -41,4 +43,6 @@ type KanbanUseCase interface {
 	GetBoardDetails(ctx context.Context, boardID string) (*BoardAggregate, error) // use * to pass a pointer to the BoardAggregate struct (instead of copied value), allowing for efficient memory usage and the ability to modify the original struct if needed.
 
 	MoveTask(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
+
+	CreateTask(ctx context.Context, columnID string, title string, description string) (*Task, error)
 }

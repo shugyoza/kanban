@@ -19,6 +19,12 @@ type MoveTaskPayload struct {
 	TargetPosition int `json:"targetPosition"`
 }
 
+type CreateTaskPayload struct {
+	ColumnID string `json:"columnId"`
+	Title string `json:"title"`
+	Description string `json:"description"`
+}
+
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
 func NewKanbanHandler(uc domain.KanbanUseCase) *KanbanHandler {
 	return &KanbanHandler{
@@ -93,4 +99,39 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Return a clean HTTP 204 No Content status on a completely successful operation
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r * http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload CreateTaskPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	createdTask, err := h.useCase.CreateTask(r.Context(), payload.ColumnID, payload.Title, payload.Description)
+	if err != nil {
+		log.Printf("Error executing task creation workflow: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, "Internal server creation failure", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(createdTask); err != nil {
+		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+		return
+	}
 }

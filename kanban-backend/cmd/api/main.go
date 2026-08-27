@@ -79,8 +79,9 @@ func main() {
 	kanbanHandler := handler.NewKanbanHandler(kanbanUseCase)
 
 	// Map handler's method to a real web URL path endpoint
-	http.HandleFunc("/api/boards", kanbanHandler.GetBoard)
-	http.HandleFunc("/api/tasks/move", kanbanHandler.MoveTask)
+	http.HandleFunc("GET /api/boards", kanbanHandler.GetBoard)
+	http.HandleFunc("PUT /api/tasks/move", kanbanHandler.MoveTask)
+	http.HandleFunc("POST /api/tasks", kanbanHandler.CreateTask)
 
 	serverPort := ":8080"
 	// Fire up the native Go local web server

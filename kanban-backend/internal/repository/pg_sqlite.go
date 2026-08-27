@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 )
 
 type SQLBoardRepository struct {
@@ -87,10 +88,20 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 		columns = append(columns, col)
 	}
 
+	// Explicitly sort the columns array slice by position to override Go's map randomization, and ensure the sort order is enforced
+	slices.SortFunc(columns, func(a, b ColumnModel) int {
+		return a.Position - b.Position
+	})
+
 	var tasks []TaskModel
 	for _, task := range taskMap {
 		tasks = append(tasks, task)
 	}
+
+	// Explicitly sort the tasks array slice by position to override Go's map randomization
+	slices.SortFunc(tasks, func(a, b TaskModel) int {
+		return a.Position - b.Position
+	})
 
 	return &board, columns, tasks, nil
 }

@@ -100,6 +100,7 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 			return a.Position - b.Position
 		})
 
+		col.Tasks = tasks
 		columns = append(columns, col)
 	}
 

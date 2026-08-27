@@ -3,9 +3,9 @@ package handler
 import (
 	"backend/internal/domain"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
-	"log"
 )
 
 type KanbanHandler struct {
@@ -78,14 +78,13 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// 3. Trigger core Hexagonal Business Interactor UseCase
-	err := h.useCase.MoveTask(r.Context(), payload.TaskID, payload.TargetColumnID, payload.TargetPosition) {
-		if err != nil {
-			log.Printf("Error executing task move workflow: %v", err)
+	err := h.useCase.MoveTask(r.Context(), payload.TaskID, payload.TargetColumnID, payload.TargetPosition)
+	if err != nil {
+		log.Printf("Error executing task move workflow: %v", err)
 
-			if strings.Contains(err.Error(), "business rule violation") {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)

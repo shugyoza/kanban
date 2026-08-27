@@ -68,28 +68,7 @@ func (uc *KanbanInteractor) MoveTask(ctx context.Context, taskID string, targetC
 
 	return nil
 }
-/*
-// CreateTask orchestrates input filtering and calls the data repository layer
-func (uc *KanbanInteractor) CreateTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
-	// 1. Enforce business rule validation early to block malicious or malformed traffic
-	if columnID == "" {
-		return nil, fmt.Errorf("business rule violation: parent column ID is mandatory for task creation")
-	}
-	if title == "" {
-		return nil, fmt.Errorf("business rule violation: task title cannot be left blank")
-	}
 
-	// 2. Delegate the generation execution to your database repository layer port
-	createdTask, err := uc.repo.InsertTask(ctx, columnID, title, description)
-	if err != nil {
-		return nil, fmt.Errorf("usecase failed to create and insert task: %w", err)
-	}
-
-	// 3. Return the fully stamped domain entity object directly to your outer handler
-	return createdTask, nil
-}
-
-*/
 func (uc *KanbanInteractor) CreateTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
 	if columnID == "" {
 		return nil, fmt.Errorf("business rule violation: parent column ID is mandatory for task creation")

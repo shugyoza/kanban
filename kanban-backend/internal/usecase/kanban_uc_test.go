@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"backend/internal/repository"
+	"kanban-backend/internal/repository"
 )
 
 // 1. Define the Mock Repository struct

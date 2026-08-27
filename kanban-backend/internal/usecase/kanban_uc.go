@@ -16,9 +16,9 @@ Core Responsibilities of an Interactor:
 package usecase
 
 import (
-	"backend/internal/domain"
 	"context"
 	"fmt"
+	"kanban-backend/internal/domain"
 )
 
 type KanbanInteractor struct {
@@ -33,51 +33,17 @@ func NewKanbanInteractor(repo domain.BoardRepository) *KanbanInteractor {
 // GetBoardDetails orchestrates the data retrieval and formats the nested tree
 func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
 	//  1.  Fetch the raw models from the database repository layer
-	boardModel, columnModels, taskModels, err := uc.repo.GetBoardTree(ctx, boardID)
+	boardAggregate, err := uc.repo.GetBoardTree(ctx, boardID)
 	if err != nil {
 		return nil, fmt.Errorf("usecase failed to get board details: %w", err)
 	}
 
 	// 2. Handle empty state (if the board ID was not found)
-	if boardModel == nil || boardModel.ID == "" {
+	if boardAggregate == nil || boardAggregate.ID == "" {
 		return nil, fmt.Errorf("board not found")
 	}
 
-	// 3. Map tasks into a fast-lookup map grouped by column ID
-	taskMap := make(map[string][]domain.Task)
-	for _, task := range taskModels {
-		taskMap[task.ColumnID] = append(taskMap[task.ColumnID], domain.Task{
-			ID:       task.ID,
-			Title:    task.Title,
-			Description: task.Description,
-			Position: task.Position,
-			ColumnID: task.ColumnID,
-		})
-	}
-
-	// 4. Assemble the nested ColumnAggregates
-	var columnAggregates []domain.ColumnAggregate
-	for _, column := range columnModels {
-		// Find any task that belongs to this specific column (default to empty slice if none)
-		tasks := taskMap[column.ID]
-		if (tasks == nil) {
-			tasks = []domain.Task{} // if no tasks exist for this column, ensure we return an empty JSON array instead of null
-		}
-
-		columnAggregates = append(columnAggregates, domain.ColumnAggregate{
-			ID:       column.ID,
-			Title:    column.Title,
-			Position: column.Position,
-			Tasks:    tasks, // Attach tasks to the corresponding column
-		})
-	}
-
-	// 5. Construct and return the final unified aggregate tree
-	return &domain.BoardAggregate{
-		ID:      boardModel.ID,
-		Title:   boardModel.Title,
-		Columns: columnAggregates,
-	}, nil
+	return boardAggregate, nil
 }
 
 func (uc *KanbanInteractor) MoveTask(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
@@ -101,4 +67,41 @@ func (uc *KanbanInteractor) MoveTask(ctx context.Context, taskID string, targetC
 	}
 
 	return nil
+}
+/*
+// CreateTask orchestrates input filtering and calls the data repository layer
+func (uc *KanbanInteractor) CreateTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
+	// 1. Enforce business rule validation early to block malicious or malformed traffic
+	if columnID == "" {
+		return nil, fmt.Errorf("business rule violation: parent column ID is mandatory for task creation")
+	}
+	if title == "" {
+		return nil, fmt.Errorf("business rule violation: task title cannot be left blank")
+	}
+
+	// 2. Delegate the generation execution to your database repository layer port
+	createdTask, err := uc.repo.InsertTask(ctx, columnID, title, description)
+	if err != nil {
+		return nil, fmt.Errorf("usecase failed to create and insert task: %w", err)
+	}
+
+	// 3. Return the fully stamped domain entity object directly to your outer handler
+	return createdTask, nil
+}
+
+*/
+func (uc *KanbanInteractor) CreateTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
+	if columnID == "" {
+		return nil, fmt.Errorf("business rule violation: parent column ID is mandatory for task creation")
+	}
+	if (title == "") {
+		return nil, fmt.Errorf("business rule violation: task title cannot be left blank")
+	}
+
+	createdTask, err := uc.repo.InsertTask(ctx, columnID, title, description)
+	if err != nil {
+		return nil, fmt.Errorf("usecase failed to create and insert task: %w", err)
+	}
+
+	return createdTask, nil
 }

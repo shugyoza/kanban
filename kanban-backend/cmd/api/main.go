@@ -8,11 +8,11 @@ This is important for preventing resource leaks (leak db connection or leave orp
 package main
 
 import (
-	"backend/internal/handler"
-	"backend/internal/repository"
-	"backend/internal/usecase"
 	"context"
 	"database/sql"
+	"kanban-backend/internal/handler"
+	"kanban-backend/internal/repository"
+	"kanban-backend/internal/usecase"
 	"log"
 	"net/http"
 	"os"

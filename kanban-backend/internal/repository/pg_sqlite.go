@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"kanban-backend/internal/domain"
 	"slices"
+	"time"
 )
 
 type SQLBoardRepository struct {
@@ -16,7 +18,7 @@ func NewSQLBoardRepository(db *sql.DB) *SQLBoardRepository {
 	return &SQLBoardRepository{db: db}
 }
 
-func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*BoardModel, []ColumnModel, []TaskModel, error) {
+func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
 	query := `
 		SELECT 
 			b.id, b.title,
@@ -31,13 +33,13 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 
 	rows, err := r.db.QueryContext(ctx, query, boardID)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to query board tree: %w", err)
+		return nil, fmt.Errorf("failed to query board tree: %w", err)
 	}
 	defer rows.Close()
 
-	var board BoardModel
-	columnMap := make(map[string]ColumnModel)
-	taskMap := make(map[string]TaskModel)
+	var board domain.BoardAggregate // Uses domain model directly
+	columnMap := make(map[string]domain.ColumnAggregate)
+	taskMap := make(map[string][]domain.Task)
 
 	boardPopulated := false
 
@@ -50,7 +52,7 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 
 		err := rows.Scan(&bID, &bTitle, &cID, &cTitle, &cPosition, &tID, &tColumnID, &tTitle, &tDescription, &tPosition)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		// Populate the parent board details once
@@ -62,48 +64,52 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 
 		// 2. Collect unique columns found in the join
 		if cID.Valid {
-			columnMap[cID.String] = ColumnModel{
+			if _, exists := columnMap[cID.String]; !exists {
+			columnMap[cID.String] = domain.ColumnAggregate{
 				ID: cID.String,
-				BoardID: board.ID,
 				Title: cTitle.String,
 				Position: int(cPosition.Int32),
+				Tasks: []domain.Task{},
+			}
+
 			}
 		}
 
 		// 3. Collect unique tasks found in the join
-		if tID.Valid {
-			taskMap[tID.String] = TaskModel{
+		if tID.Valid && tColumnID.Valid {
+			taskMap[tColumnID.String] = append(taskMap[tColumnID.String], domain.Task{
 				ID: tID.String,
 				ColumnID: tColumnID.String,
 				Title: tTitle.String,
 				Description: tDescription.String,
 				Position: int(tPosition.Int32),
-			}
+			})
 		}
 	}
 
 	// Flatten maps into slices to pass back to the business domain layer.
-	var columns []ColumnModel
-	for _, col := range columnMap {
+	var columns []domain.ColumnAggregate
+	for colID, col := range columnMap {
+		tasks := taskMap[colID]
+		if tasks == nil {
+			tasks = []domain.Task{} // Guarantees empty JSON array [] instead of null
+		}
+
+		// Explicitly sort the task cards vertically inside this column to override Go's map randomization, and ensure the sort order is enforced
+		slices.SortFunc(tasks, func(a, b domain.Task) int {
+			return a.Position - b.Position
+		})
+
 		columns = append(columns, col)
 	}
 
-	// Explicitly sort the columns array slice by position to override Go's map randomization, and ensure the sort order is enforced
-	slices.SortFunc(columns, func(a, b ColumnModel) int {
+	// Explicitly sort the columns array slice by position to override Go's map extraction randomization
+	slices.SortFunc(columns, func(a, b domain.ColumnAggregate) int {
 		return a.Position - b.Position
 	})
 
-	var tasks []TaskModel
-	for _, task := range taskMap {
-		tasks = append(tasks, task)
-	}
-
-	// Explicitly sort the tasks array slice by position to override Go's map randomization
-	slices.SortFunc(tasks, func(a, b TaskModel) int {
-		return a.Position - b.Position
-	})
-
-	return &board, columns, tasks, nil
+	board.Columns = columns
+	return &board, nil
 }
 
 func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
@@ -181,4 +187,51 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 	}
 
 	return nil
+}
+
+func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start insert transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 1. OPTIMISTIC POSITIONING: Push all existing tasks in this column lane down by 1
+	// to make room for a brand new task at position 0
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE tasks SET position = position + 1 WHERE column_id = 1",
+		columnID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-index column for new task insertion: %w", err)
+	}
+
+	// 2. GENERATE TRACKING ID: Create a randomized high-entropy tracking string
+	newID := fmt.Sprintf("task-%d", time.Now())
+	defaultPosition := 0
+
+	// 3. EXECUTE THE WRITE: Save the clean parameters permanently to the table rows
+	query := `
+	INSERT INTO tasks (id, column_id, title, description, position, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
+	_, err = tx.ExecContext(ctx, query, newID, columnID, title, description, defaultPosition)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert raw task row: %w", err)
+	}
+
+	// 4. FINALIZE: Commit the transaction permanently to disk
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to finalize task creation transaction: %w", err)
+	}
+
+	// 5. RETURN VALUE: pass a pointer to the clean domain entity back up the stack
+	return &domain.Task{
+		ID: newID,
+		ColumnID: columnID,
+		Title: title,
+		Description: description,
+		Position: defaultPosition,
+	}, nil
 }

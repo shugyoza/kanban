@@ -3,7 +3,6 @@
 package domain
 
 import (
-	"backend/internal/repository"
 	"context"
 )
 
@@ -31,7 +30,7 @@ type BoardAggregate struct {
 }
 
 type BoardRepository interface {
-	GetBoardTree(ctx context.Context, boardID string) (*repository.BoardModel, []repository.ColumnModel, []repository.TaskModel, error)
+	GetBoardTree(ctx context.Context, boardID string) (*BoardAggregate, error)
 
 	UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 

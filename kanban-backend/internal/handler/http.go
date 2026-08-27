@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"backend/internal/domain"
 	"encoding/json"
+	"kanban-backend/internal/domain"
 	"log"
 	"net/http"
 	"strings"

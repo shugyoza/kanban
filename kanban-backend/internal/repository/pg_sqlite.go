@@ -201,7 +201,7 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 	// to make room for a brand new task at position 0
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET position = position + 1 WHERE column_id = 1",
+		"UPDATE tasks SET position = position + 1 WHERE column_id = $1",
 		columnID,
 	)
 	if err != nil {
@@ -209,7 +209,7 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 	}
 
 	// 2. GENERATE TRACKING ID: Create a randomized high-entropy tracking string
-	newID := fmt.Sprintf("task-%d", time.Now())
+	newID := fmt.Sprintf("task-%d", time.Now().UnixNano())
 	defaultPosition := 0
 
 	// 3. EXECUTE THE WRITE: Save the clean parameters permanently to the table rows

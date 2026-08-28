@@ -107,3 +107,19 @@ func TestGetBoardDetails_NotFound(t *testing.T) {
 		t.Errorf("Expected strict 'board not found' error exception, received: %v", err)
 	}
 }
+
+func TestMoveTask_BusinessRuleViolations(t *testing.T) {
+	interactor := NewKanbanInteractor(&mockBoardRepository{})
+
+	// Test 1: Missing Task ID
+	err := interactor.MoveTask(context.Background(), "", "col-1", 0)
+	if err == nil || err.Error() != "business rule violation: task ID cannot be empty" {
+		t.Errorf("Expected blank task validation break, got: %v", err)
+	}
+
+	// Test 2: Negative Position Index
+	err = interactor.MoveTask(context.Background(), "task-1", "col-1", -5)
+	if err == nil || err.Error() != "business rule violation: position index cannot be negative" {
+		t.Errorf("Expected negative position index protection error, got: %v", err)
+	}
+}

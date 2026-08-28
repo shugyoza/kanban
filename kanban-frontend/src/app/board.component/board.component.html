@@ -18,6 +18,10 @@
                         {{ column.title }}
                     </h2>
 
+                    @if ($index === 0) {
+                        <app-create-task [columnId]="column.id" />
+                    }
+
                     <!-- 2. Turn this container into a registered list drop zone -->
                     <div class="tasks-list" cdkDropList [id]="column.id" [cdkDropListData]="column.tasks" (cdkDropListDropped)="onCardDropped($event)">
                         @for (task of column.tasks; track task.id) {

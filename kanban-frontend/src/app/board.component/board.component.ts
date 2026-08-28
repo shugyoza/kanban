@@ -2,9 +2,10 @@ import { Component, inject, OnInit } from '@angular/core';
 import { KanbanService } from '../services/kanban.service';
 import { Task } from '../models/kanban.model';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { CreateTaskComponent } from '../components/create-task/create-task.component';
 
 @Component({
-  imports: [DragDropModule],
+  imports: [DragDropModule, CreateTaskComponent],
   selector: 'app-board',
   styleUrl: './board.component.css',
   templateUrl: './board.component.html',

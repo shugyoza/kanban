@@ -20,3 +20,8 @@ export interface BoardAggregate {
     title: string;
     columns: ColumnAggregate[];
 }
+
+export interface CreateTask {
+  title: string;
+  description: string;
+}

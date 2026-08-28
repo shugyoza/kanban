@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { BoardAggregate, Task } from '../models/kanban.model';
+import { BoardAggregate, CreateTask, Task } from '../models/kanban.model';
 import { catchError, of } from 'rxjs';
+import { form, maxLength, required } from '@angular/forms/signals';
+
+const INITIAL_TASK: CreateTask = {
+    title: '',
+    description: ''
+}
 
 /* @Service() a new decorator in place of the old @Injectable. 
 * By default @Service automatically registers the class as a global root-level singleton,
@@ -13,6 +19,16 @@ export class KanbanService {
     private boardState = signal<BoardAggregate | null>(null);
     public board = this.boardState.asReadonly();
     public isLoaded = computed<boolean>(() => this.boardState() !== null);
+
+    public readonly isCreateTaskFormOpen = signal<boolean>(false);
+    public createTaskModel = signal<CreateTask>({ ...INITIAL_TASK });
+    public createTaskForm = form(this.createTaskModel, schemaPath => {
+        required(schemaPath.title, { message: 'Title is required' });
+        required(schemaPath.description, { message: 'Description is required' });
+        maxLength(schemaPath.title, 255, { message: 'Maximum 255 characters' })
+    });
+
+
     public loadBoard(boardId: string): void {
         this.http.get<BoardAggregate>(`/api/boards?id=${boardId}`).pipe(
             catchError(error => {
@@ -38,7 +54,7 @@ export class KanbanService {
         const currentBoard = this.boardState();
 
         if (!currentBoard) return;
-        
+
         // A. CAPTURE SNAPSHOT: Store a copy of the exact starting state in case server fails
         const rollbackSnapshot = { ...currentBoard };
 
@@ -94,8 +110,11 @@ export class KanbanService {
         ).subscribe();
     }
 
-    public createTask(columnId: string, title: string, description: string):void {
+    public createTask(columnId: string): void {
         const currentBoard = this.boardState();
+        const title = this.createTaskModel().title;
+        const description = this.createTaskModel().description;
+
         if (!currentBoard) return;
 
         // Capture snapshot to rollback current state if API call failed
@@ -160,12 +179,12 @@ export class KanbanService {
                 if (!finalizedBoard) return;
 
                 const alignedColumns = finalizedBoard.columns.map(col => {
-                    if (col.id !== columnId) return col;
+                    if (col.id !== columnId) return { ...col, tasks: [ ...col.tasks ]};
 
                     return {
                         ...col,
                         tasks: col.tasks.map(t => {
-                            if (t.id !== tempId) {
+                            if (t.id === tempId) {
 
                                 return {
                                     ...t,
@@ -182,6 +201,10 @@ export class KanbanService {
                 this.boardState.set({
                     ...finalizedBoard, columns: alignedColumns
                 })
+
+                // reset the create task form
+                this.createTaskForm().reset({ ...INITIAL_TASK });
+                this.isCreateTaskFormOpen.set(false);
             }
         })
     }

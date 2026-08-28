@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { BoardAggregate } from '../models/kanban.model';
+import { BoardAggregate, Task } from '../models/kanban.model';
 import { catchError, of } from 'rxjs';
 
 /* @Service() a new decorator in place of the old @Injectable. 
@@ -92,5 +92,97 @@ export class KanbanService {
                 return of(null);
             })
         ).subscribe();
+    }
+
+    public createTask(columnId: string, title: string, description: string):void {
+        const currentBoard = this.boardState();
+        if (!currentBoard) return;
+
+        // Capture snapshot to rollback current state if API call failed
+        const rollbackSnapshot = { ...currentBoard };
+        // Create client-side id to trace the visual node
+        const tempId = `temp-${Date.now()}`;
+
+        // Deep copy columns and push existing cards down to clear index 0
+        const updatedColumns = currentBoard.columns.map(col => {
+            if (col.id !== columnId) {
+                return { ...col, tasks: [...col.tasks] };
+            }
+
+            const shiftedTasks = col.tasks.map(t => {
+                return {
+                    ...t,
+                    position: t.position + 1
+                }
+            })
+
+            const newTask: Task = {
+                id: tempId,
+                columnId,
+                title,
+                description,
+                position: 0
+            }
+
+            return {
+                ...col,
+                tasks: [newTask, ...shiftedTasks]
+            }
+        })
+
+        // Optimistic update
+        this.boardState.set({
+            ...currentBoard,
+            columns: updatedColumns
+        })
+
+        // Trigger Http call
+        const payload = {
+            columnId,
+            title,
+            description
+        }
+
+        this.http.post<Task>('/api/tasks', payload).pipe(
+            catchError(error => {
+                console.error(error);
+                alert('Failed to save your new task. Reverting changes...');
+                this.boardState.set(rollbackSnapshot);
+
+                return of(null)
+            })
+        ).subscribe({
+            next: serverSavedTask => {
+                if (!serverSavedTask) return;
+
+                // ID alignment: Swap out temporary task id with the final database ID returned from BE
+                const finalizedBoard = this.boardState();
+                if (!finalizedBoard) return;
+
+                const alignedColumns = finalizedBoard.columns.map(col => {
+                    if (col.id !== columnId) return col;
+
+                    return {
+                        ...col,
+                        tasks: col.tasks.map(t => {
+                            if (t.id !== tempId) {
+
+                                return {
+                                    ...t,
+                                    id: serverSavedTask.id
+                                }
+                            }
+
+                            return t;
+                        })
+                    }
+                })
+
+                // finalized board state in UI
+                this.boardState.set({
+                    ...finalizedBoard, columns: alignedColumns
+                })
+            }
+        })
     }
 }

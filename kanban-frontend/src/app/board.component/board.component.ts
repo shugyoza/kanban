@@ -36,9 +36,6 @@ export class BoardComponent implements OnInit {
       return;
     }
 
-    // Log movements for developing purpose. TODO: clean up later
-    console.log(column, row, data)
-
     // Pass the indices down to state store orchestrator service layer
     this.kanbanService.moveTask(
       column,

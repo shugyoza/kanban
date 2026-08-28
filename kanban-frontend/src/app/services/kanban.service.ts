@@ -51,12 +51,6 @@ export class KanbanService {
         const sourceColumn = updatedColumns.find(c => c.id === column.from);
         const targetColumn = updatedColumns.find(c => c.id === column.to);
 
-        // TODO: clean up
-        console.log({
-            sourceColumn,
-            targetColumn
-        })
-
         if (!sourceColumn || !targetColumn) return;
 
         // 2. Extract the target task being moved
@@ -80,9 +74,6 @@ export class KanbanService {
             ...currentBoard,
             columns: updatedColumns
         })
-
-        // 7. TODO: Trigger non blocking HTTP PATCH/PUT request to update the Go backend db persistence layer
-        console.log(`Backend Synchronization Primed: Task ${movedTask.id} shifted to column ${column.to} at position ${row.to}`)
 
         const payload = {
             taskId: movedTask.id,

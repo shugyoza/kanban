@@ -123,3 +123,38 @@ func TestMoveTask_BusinessRuleViolations(t *testing.T) {
 		t.Errorf("Expected negative position index protection error, got: %v", err)
 	}
 }
+
+func TestCreateTask_Success(t * testing.T) {
+	mockRepo := &mockBoardRepository{
+		insertTask: func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
+			return &domain.Task{
+				ID: "task-123",
+				ColumnID: columnID,
+				Title: title,
+				Description: description,
+				Position: 0,
+			}, nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	task, err := interactor.CreateTask(context.Background(), "col-todo", "Write Unit Tests", "Cover backend core components")
+
+	if err != nil {
+		t.Fatalf("Expected clean execution pass, received unexpected error: %v", err)
+	}
+
+	if task.ID != "task-123" || task.Position != 0 {
+		t.Errorf("Task properties corrupted during entity generation pipeline")
+	}
+}
+
+func TestCreateTask_ValidationFails(t *testing.T) {
+	interactor := NewKanbanInteractor(&mockBoardRepository{})
+
+	// Test: attempt to insert task with empty title header
+	_, err := interactor.CreateTask(context.Background(), "col-todo", "", "Missing Title Details")
+	if err == nil || err.Error() != "business rule violation: task title cannot be left blank" {
+		t.Errorf("Expected strict blank title check violation rule break, got: %v", err)
+	}
+}

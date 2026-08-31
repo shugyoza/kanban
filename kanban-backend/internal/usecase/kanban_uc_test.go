@@ -14,6 +14,7 @@ type mockBoardRepository struct {
 	getBoardTree func(ctx context.Context, boardID string) (*domain.BoardAggregate, error)
 	updateTaskPositions func(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 	insertTask func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error)
+	deleteTask func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
@@ -27,6 +28,10 @@ func (m *mockBoardRepository) UpdateTaskPositions(ctx context.Context, taskID st
 
 func (m *mockBoardRepository) InsertTask(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
 	return m.insertTask(ctx, columnID, title, description)
+}
+
+func (m *mockBoardRepository) DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error {
+	return m.deleteTask(ctx, columnID, deletedTaskID, deletedTaskPosition)
 }
 
 // 3. The unit test function
@@ -124,7 +129,7 @@ func TestMoveTask_BusinessRuleViolations(t *testing.T) {
 	}
 }
 
-func TestCreateTask_Success(t * testing.T) {
+func TestCreateTask_Success(t *testing.T) {
 	mockRepo := &mockBoardRepository{
 		insertTask: func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error) {
 			return &domain.Task{
@@ -156,5 +161,34 @@ func TestCreateTask_ValidationFails(t *testing.T) {
 	_, err := interactor.CreateTask(context.Background(), "col-todo", "", "Missing Title Details")
 	if err == nil || err.Error() != "business rule violation: task title cannot be left blank" {
 		t.Errorf("Expected strict blank title check violation rule break, got: %v", err)
+	}
+}
+
+// DELETE TASK VALIDATION & EXECUTION TEST CASES
+func TestDeleteTask_Success(t *testing.T) {
+	repositoryCalled := false
+
+	mockRepo := &mockBoardRepository{
+		deleteTask: func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error {
+			repositoryCalled = true
+
+			// Verify that the UseCase safely forwarded the correct arguments down the wire
+			if columnID != "col-todo" || deletedTaskID != "task-1" || deletedTaskPosition != 2 {
+				t.Errorf("UseCase passed corrupted arguments to repository layer")
+			}
+			
+			return nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	err := interactor.DeleteTask(context.Background(), "col-todo", "task-1", 2)
+
+	if err != nil {
+		t.Fatalf("Expected zero errors during clean task deletion, go: %v", err)
+	}
+
+	if !repositoryCalled {
+		t.Errorf("UseCase failed to delegate data removal execution to the repository layer")
 	}
 }

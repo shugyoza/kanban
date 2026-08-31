@@ -84,3 +84,24 @@ func (uc *KanbanInteractor) CreateTask(ctx context.Context, columnID string, tit
 
 	return createdTask, nil
 }
+
+func (uc *KanbanInteractor) DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error {
+	if columnID == "" {
+		return fmt.Errorf("business rule violation: parent column ID is mandatory for task deletion")
+	}
+
+	if deletedTaskID == "" {
+		return fmt.Errorf("business rule violation: task ID to delete is mandatory for task deletion")
+	}
+
+	if deletedTaskPosition < 0 {
+		return fmt.Errorf("business rule violation: task position to delete is mandatory for task deletion")
+	}
+
+	err := uc.repo.DeleteTask(ctx, columnID, deletedTaskID, deletedTaskPosition)
+	if err != nil {
+		return fmt.Errorf("usecase failed to execute task deletion: %w", err)
+	}
+
+	return nil
+}

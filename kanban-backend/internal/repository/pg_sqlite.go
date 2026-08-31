@@ -134,7 +134,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 	// 3. Re-order items based on whether it moved columns or stayed within the same column
 	if currentColumnID == targetColumnID {
 		// Moving within the same column lane
-		if (currentPosition < targetPosition) {
+		if currentPosition < targetPosition {
 			// shifting down: push intermediate cards up
 			_, err = tx.ExecContext(
 				ctx, 
@@ -235,4 +235,41 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 		Description: description,
 		Position: defaultPosition,
 	}, nil
+}
+
+func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error {
+	// 1. Initialize a strict ACID db transaction block
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start delete transaction: %w", err)
+	}
+
+	// Defer a rollback safety mechanism. If tx.Commit() is executed successfully, this becomes a safe no-op.
+	defer tx.Rollback()
+
+	// 2. Query to delete the row
+	_, err = tx.ExecContext(
+		ctx,
+		"DELETE FROM tasks WHERE column_id = $1 AND id = $2",
+		columnID,
+		deletedTaskID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete raw task row: %w", err)
+	}
+
+	// Re-index all the rows within the column
+	gapQuery := "UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2"
+	_, err = tx.ExecContext(ctx, gapQuery, columnID, deletedTaskPosition)
+	if err != nil {
+		return fmt.Errorf("failed to close position gap following deletion: %w", err)
+	}
+
+
+	// Explicitly commit the transaction permanently to disk file storage
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to finalize task delete transaction: %w", err)
+	}
+
+	return nil
 }

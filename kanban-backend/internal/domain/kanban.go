@@ -35,6 +35,8 @@ type BoardRepository interface {
 	UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 
 	InsertTask(ctx context.Context, columnID string, title string, description string) (*Task, error)
+
+	DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
 }
 
 // KanbanUseCase defines the business rules available for the Kanban board.
@@ -44,4 +46,6 @@ type KanbanUseCase interface {
 	MoveTask(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 
 	CreateTask(ctx context.Context, columnID string, title string, description string) (*Task, error)
+
+	DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
 }

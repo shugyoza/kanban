@@ -25,6 +25,12 @@ type CreateTaskPayload struct {
 	Description string `json:"description"`
 }
 
+type DeleteTaskPayload struct {
+	ColumnID string `json:"columnId`
+	TaskID string `json:"taskId`
+	TaskPosition int `json:"taskPosition`
+}
+
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
 func NewKanbanHandler(uc domain.KanbanUseCase) *KanbanHandler {
 	return &KanbanHandler{
@@ -101,7 +107,7 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r * http.Request) {
+func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -134,4 +140,33 @@ func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r * http.Request) {
 		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *KanbanHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload DeleteTaskPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	err := h.useCase.DeleteTask(r.Context(), payload.ColumnID, payload.TaskID, payload.TaskPosition)
+	if err != nil {
+		log.Printf("Error executing task deletion workflow: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

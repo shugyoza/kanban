@@ -43,4 +43,8 @@ export class BoardComponent implements OnInit {
       row
     )
   }
+
+  protected deleteTask(columnId: string, taskId: string, taskPosition: number): void {
+    this.kanbanService.deleteTask(columnId, taskId, taskPosition)
+  }
 }

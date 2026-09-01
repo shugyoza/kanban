@@ -37,6 +37,13 @@
     min-height: 100px;
 }
 
+.task-grid-row {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
 .task-item {
     background-color: white;
     border-radius: 4px;
@@ -44,6 +51,29 @@
     margin-bottom: 8px;
     box-shadow: 0 1px 0 rgba(9, 30, 66, .25);
     cursor: grab;
+
+    /* Reset browser native button styles */
+    border: none;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+    display: block;
+
+}
+
+/* ensure active dragging targets retain native styling values */
+.task-item:active {
+    cursor: grabbing;
+}
+
+.task-item:focus-visible {
+    outline: 2px solid #0052cc;
+    outline-offset: -2px;
+}
+
+.task-action-bar {
+    display: flex;
+    align-items: center;
 }
 
 .task-title {
@@ -89,4 +119,26 @@
     margin-bottom: 8px;
     border-radius: 4px;
     opacity: 0.4;
+}
+
+.delete-card-btn {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 150ms ease;
+}
+
+.delete-card-btn:hover {
+    background-color: #ffebe6;
+}
+
+.delete-card-btn:focus-visible {
+    outline: 2px solid #0052cc;
+    outline-offset: 2px;
 }

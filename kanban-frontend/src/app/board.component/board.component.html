@@ -26,16 +26,36 @@
                     <div class="tasks-list" cdkDropList [id]="column.id" [cdkDropListData]="column.tasks" (cdkDropListDropped)="onCardDropped($event)">
                         @for (task of column.tasks; track task.id) {
                             <!-- 3. Mark each separate item container as an independently draggable card node -->
-                            <div class="task-item" cdkDrag>
-                                <h3 class="task-title">
-                                    {{ task.title }}
-                                </h3>
-                                <p class="task-desc">
-                                    {{ task.description }}
-                                </p>
+                            <div class="task-grid-row">
+                                <button
+                                    type="button"
+                                    class="task-item"
+                                    cdkDrag
+                                    [attr.aria-label]="'Drag task: ' + task.title">
+                                    <h3 class="task-title">
+                                        {{ task.title }}
+                                    </h3>
+                                    <p class="task-desc">
+                                        {{ task.description }}
+                                    </p>
+                                    <!-- 4. Structural preview placeholder shadow that displays where a card will land during sorting animations -->
+                                     <div class="task-placeholder" *cdkDragPlaceholder></div>
+                                </button>
 
-                                <!-- 4. Structural preview placeholder shadow that displays where a card will land during sorting animations -->
-                                 <div class="task-placeholder" *cdkDragPlaceholder></div>
+                                <div class="task-action-bar">
+                                    <button
+                                        type="button"
+                                        class="delete-card-btn"
+                                        (click)="deleteTask(column.id, task.id, task.position)"
+                                        [attr.aria-label]="'Delete task: ' + task.title"
+                                        title="Delete card forever">
+                                    
+                                        <span class="material-symbols-outlined">
+                                            delete_forever
+                                        </span>
+                                    </button>
+                                </div>
+
                             </div>
                         }
                         @empty {

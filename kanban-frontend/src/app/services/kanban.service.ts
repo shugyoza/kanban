@@ -208,4 +208,52 @@ export class KanbanService {
             }
         })
     }
+
+    public deleteTask(columnId: string, taskId: string, taskPosition: number): void {
+        const currentBoard = this.boardState();
+        if (!currentBoard) return;
+
+        const rollbackSnapshot = { ...currentBoard };
+
+        const updatedColumns = currentBoard.columns.map(col => {
+            if (col.id !== columnId) {
+                return { ...col, tasks: [...col.tasks]}
+            }
+
+            const filteredTasks = col.tasks.filter(t => t.id !== taskId);
+            const reindexedTasks = filteredTasks.map((t, position) => {
+
+                return {
+                    ...t,
+                    position
+                }
+            })
+
+            return {
+                ...col,
+                tasks: reindexedTasks
+            }
+        })
+
+        this.boardState.set({
+            ...currentBoard,
+            columns: updatedColumns
+        })
+
+        const options = {
+            body: {
+                columnId,
+                taskId,
+                taskPosition
+            }
+        }
+
+        this.http.delete('/api/tasks', options).pipe(
+            catchError(error => {
+                console.error(error);
+                this.boardState.set(rollbackSnapshot)
+                return of(null)
+            })
+        ).subscribe()
+    }
 }

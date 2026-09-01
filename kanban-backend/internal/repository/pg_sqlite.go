@@ -273,3 +273,23 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 
 	return nil
 }
+
+func (r *SQLBoardRepository) UpdateTaskDetails(ctx context.Context, taskID string, title string, description string) error {
+	query := `UPDATE tasks SET title = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+
+	result, err := r.db.ExecContext(ctx, query, title, description, taskID)
+	if err != nil {
+		return fmt.Errorf("failed to update task details: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to verify update rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no task found with ID: %s", taskID)
+	}
+
+	return nil
+}

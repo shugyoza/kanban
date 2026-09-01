@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { BoardAggregate, CreateTask, Task } from '../models/kanban.model';
+import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task } from '../models/kanban.model';
 import { catchError, of } from 'rxjs';
 import { form, maxLength, required } from '@angular/forms/signals';
 
-const INITIAL_TASK: CreateTask = {
+const INITIAL_TASK: TaskCreateDTO = {
     title: '',
     description: ''
 }
@@ -15,14 +15,14 @@ const INITIAL_TASK: CreateTask = {
 */
 @Service()
 export class KanbanService {
-    private http = inject(HttpClient);
-    private boardState = signal<BoardAggregate | null>(null);
-    public board = this.boardState.asReadonly();
-    public isLoaded = computed<boolean>(() => this.boardState() !== null);
-
+    private readonly http = inject(HttpClient);
+    private readonly boardState = signal<BoardAggregate | null>(null);
+    public readonly board = this.boardState.asReadonly();
+    public readonly isLoaded = computed<boolean>(() => this.boardState() !== null);
+    public readonly taskIdOnEdit = signal<string | null>(null);
     public readonly isCreateTaskFormOpen = signal<boolean>(false);
-    public createTaskModel = signal<CreateTask>({ ...INITIAL_TASK });
-    public createTaskForm = form(this.createTaskModel, schemaPath => {
+    public readonly editTaskModel = signal<TaskCreateDTO>({ ...INITIAL_TASK });
+    public readonly editTaskForm = form(this.editTaskModel, schemaPath => {
         required(schemaPath.title, { message: 'Title is required' });
         required(schemaPath.description, { message: 'Description is required' });
         maxLength(schemaPath.title, 255, { message: 'Maximum 255 characters' })
@@ -110,10 +110,18 @@ export class KanbanService {
         ).subscribe();
     }
 
-    public createTask(columnId: string): void {
+    public handleTaskEvent(columnId: string, $event: 'submit' | 'cancel'): void {
+        if ($event === 'cancel') {
+            this.isCreateTaskFormOpen.set(false);
+            this.taskIdOnEdit.set(null);
+            this.editTaskForm().reset({ ...INITIAL_TASK });
+            
+            return;
+        }
+
         const currentBoard = this.boardState();
-        const title = this.createTaskModel().title;
-        const description = this.createTaskModel().description;
+        const title = this.editTaskModel().title;
+        const description = this.editTaskModel().description;
 
         if (!currentBoard) return;
 
@@ -203,7 +211,7 @@ export class KanbanService {
                 })
 
                 // reset the create task form
-                this.createTaskForm().reset({ ...INITIAL_TASK });
+                this.editTaskForm().reset({ ...INITIAL_TASK });
                 this.isCreateTaskFormOpen.set(false);
             }
         })
@@ -255,5 +263,9 @@ export class KanbanService {
                 return of(null)
             })
         ).subscribe()
+    }
+
+    public startEditingTask(taskId: string): void {
+        this.taskIdOnEdit.set(taskId);
     }
 }

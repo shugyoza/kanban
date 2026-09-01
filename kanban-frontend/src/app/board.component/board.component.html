@@ -19,7 +19,11 @@
                     </h2>
 
                     @if ($index === 0) {
-                        <app-create-task [columnId]="column.id" />
+                        @if (!isEditTaskFormOpen() && !taskIdOnEdit()) {
+                            <button class="add-task-btn" (click)="isEditTaskFormOpen.set(true)">Add a Task</button>
+                        } @else {
+                            <app-edit-task (taskEvent)="handleTaskEvent(column.id, $event)" />
+                        }
                     }
 
                     <!-- 2. Turn this container into a registered list drop zone -->
@@ -54,6 +58,18 @@
                                             delete_forever
                                         </span>
                                     </button>
+                                    <button
+                                        type="button"
+                                        class="edit-card-btn"
+                                        (click)="startEditingTask(task.id)"
+                                        [attr.aria-label]="'Edit task: ' + task.title"
+                                        title="Edit card">
+                                    
+                                        <span class="material-symbols-outlined">
+                                            edit
+                                        </span>
+                                    </button>
+
                                 </div>
 
                             </div>

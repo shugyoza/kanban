@@ -1,17 +1,20 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { KanbanService } from '../services/kanban.service';
 import { Task } from '../models/kanban.model';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
-import { CreateTaskComponent } from '../components/create-task/create-task.component';
+import { EditTaskComponent } from '../components/edit-task/edit-task.component';
 
 @Component({
-  imports: [DragDropModule, CreateTaskComponent],
+  imports: [DragDropModule, EditTaskComponent],
   selector: 'app-board',
   styleUrl: './board.component.css',
   templateUrl: './board.component.html',
 })
 export class BoardComponent implements OnInit {
-  protected kanbanService = inject(KanbanService)
+  protected readonly kanbanService = inject(KanbanService);
+  protected readonly taskIdOnEdit = computed<string | null>(() => this.kanbanService.taskIdOnEdit());
+  protected readonly isEditTaskFormOpen = this.kanbanService.isCreateTaskFormOpen;
+
 
   ngOnInit(): void {
     this.kanbanService.loadBoard('board-kanban-1')
@@ -46,5 +49,20 @@ export class BoardComponent implements OnInit {
 
   protected deleteTask(columnId: string, taskId: string, taskPosition: number): void {
     this.kanbanService.deleteTask(columnId, taskId, taskPosition)
+  }
+
+  protected handleTaskEvent(columnId: string, $event: 'submit' | 'cancel'): void {
+    switch ($event) {
+      case 'cancel':
+        this.kanbanService.isCreateTaskFormOpen.set(false)
+        break;
+      default:
+        this.kanbanService.handleTaskEvent(columnId, $event)
+        break;
+    }
+  }
+
+  protected startEditingTask(taskId: string): void {
+    this.kanbanService.taskIdOnEdit.set(taskId)
   }
 }

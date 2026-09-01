@@ -1,0 +1,19 @@
+    <form class="edit-task-form" (submit)="$event.preventDefault();taskEvent.emit('submit')">
+        <input type="text" placeholder="Enter task title..." class="task-input-title" [formField]="editTaskForm.title" />
+        <span>
+            {{ editTaskForm.title().errors()?.[0]?.message }}
+        </span>
+        <textarea type="text" placeholder="Enter task description..." class="task-input-desc" rows="1"
+            [formField]="editTaskForm.description"></textarea>
+        <span>
+            {{ editTaskForm.description().errors()?.[0]?.message }}
+        </span>
+        <section class="form-actions">
+            <button type="submit" class="submit-btn" [disabled]="editTaskForm.title().invalid() || editTaskForm.description().invalid()">
+                Submit
+            </button>
+            <button type="button" class="cancel-btn" (click)="taskEvent.emit('cancel')">
+                Cancel
+            </button>
+        </section>
+    </form>

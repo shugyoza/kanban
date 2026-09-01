@@ -105,3 +105,19 @@ func (uc *KanbanInteractor) DeleteTask(ctx context.Context, columnID string, del
 
 	return nil
 }
+
+func (uc *KanbanInteractor) EditTask(ctx context.Context, taskID string, title string, description string) error {
+	if taskID == "" {
+		return fmt.Errorf("business rule violation: task ID is mandatory for task editing")
+	}
+	if title == "" {
+		return fmt.Errorf("business rule violation: task title cannot be left blank")
+	}
+
+	err := uc.repo.UpdateTaskDetails(ctx, taskID, title, description)
+	if err != nil {
+		return fmt.Errorf("usecase failed to modify task details: %w", err)
+	}
+
+	return nil
+}

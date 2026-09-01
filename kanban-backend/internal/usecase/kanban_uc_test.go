@@ -15,6 +15,7 @@ type mockBoardRepository struct {
 	updateTaskPositions func(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 	insertTask func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error)
 	deleteTask func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
+	updateTaskDetails func(ctx context.Context, taskID string, title string, description string) error
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
@@ -32,6 +33,10 @@ func (m *mockBoardRepository) InsertTask(ctx context.Context, columnID string, t
 
 func (m *mockBoardRepository) DeleteTask(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error {
 	return m.deleteTask(ctx, columnID, deletedTaskID, deletedTaskPosition)
+}
+
+func (m *mockBoardRepository) UpdateTaskDetails(ctx context.Context, taskID string, title string, description string) error {
+	return m.updateTaskDetails(ctx, taskID, title, description)
 }
 
 // 3. The unit test function
@@ -190,5 +195,30 @@ func TestDeleteTask_Success(t *testing.T) {
 
 	if !repositoryCalled {
 		t.Errorf("UseCase failed to delegate data removal execution to the repository layer")
+	}
+}
+
+func TestEditTask_Success(t *testing.T) {
+	repositoryCalled := false
+
+	mockRepo := &mockBoardRepository{
+		updateTaskDetails: func(ctx context.Context, taskID string, title string, description string) error {
+			repositoryCalled = true
+			if taskID != "task-1" || title != "Updated Title" {
+				t.Errorf("UseCase passed corrupted editing arguments to repository layer")
+			}
+
+			return nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	err := interactor.EditTask(context.Background(), "task-1", "Updated Title", "Updated Description")
+
+	if err != nil {
+		t.Fatalf("Expected zero errors during clean task edit, got: %v", err)
+	}
+	if !repositoryCalled {
+		t.Errorf("UseCase failed to delegate task edit execution to the repository layer")
 	}
 }

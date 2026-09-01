@@ -119,6 +119,8 @@ func (h *KanbanHandler) HandleTask(w http.ResponseWriter, r *http.Request) {
 		h.CreateTask(w, r)
 	case http.MethodDelete:
 		h.DeleteTask(w, r)
+	case http.MethodPatch:
+		h.UpdateTask(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

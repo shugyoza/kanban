@@ -107,12 +107,18 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+func (h *KanbanHandler) HandleTask(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.CreateTask(w, r)
+	case http.MethodDelete:
+		h.DeleteTask(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
+}
 
+func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var payload CreateTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
@@ -143,11 +149,6 @@ func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *KanbanHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var payload DeleteTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)

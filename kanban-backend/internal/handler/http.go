@@ -26,9 +26,9 @@ type CreateTaskPayload struct {
 }
 
 type DeleteTaskPayload struct {
-	ColumnID string `json:"columnId`
-	TaskID string `json:"taskId`
-	TaskPosition int `json:"taskPosition`
+	ColumnID string `json:"columnId"`
+	TaskID string `json:"taskId"`
+	TaskPosition int `json:"taskPosition"`
 }
 
 type UpdateTaskPayload struct {

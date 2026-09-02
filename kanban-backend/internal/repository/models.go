@@ -30,6 +30,7 @@ type TaskModel struct {
 	Title       string    `db:"title" json:"title"`
 	Description string    `db:"description" json:"description"`
 	Position    int       `db:"position" json:"position"`
+	IsArchived  int       `db:"is_archived" json:"isArchived"`
 	CreatedAt   time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updatedAt"`
 }

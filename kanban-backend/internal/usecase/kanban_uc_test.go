@@ -4,6 +4,7 @@ package usecase
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"kanban-backend/internal/domain"
@@ -16,6 +17,7 @@ type mockBoardRepository struct {
 	insertTask func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error)
 	deleteTask func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
 	updateTaskDetails func(ctx context.Context, taskID string, title string, description string) error
+	archiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
@@ -37,6 +39,10 @@ func (m *mockBoardRepository) DeleteTask(ctx context.Context, columnID string, d
 
 func (m *mockBoardRepository) UpdateTaskDetails(ctx context.Context, taskID string, title string, description string) error {
 	return m.updateTaskDetails(ctx, taskID, title, description)
+}
+
+func (m *mockBoardRepository) ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+	return m.archiveTask(ctx, columnID, taskID, taskPosition)
 }
 
 // 3. The unit test function
@@ -220,5 +226,46 @@ func TestEditTask_Success(t *testing.T) {
 	}
 	if !repositoryCalled {
 		t.Errorf("UseCase failed to delegate task edit execution to the repository layer")
+	}
+}
+
+func TestArchiveTask_Success(t *testing.T) {
+	repositoryCalled := false
+
+	mockRepo := &mockBoardRepository{
+		archiveTask: func(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+			repositoryCalled = true
+			if columnID != "col-1" || taskID != "task-1" || taskPosition != 0 {
+
+				t.Errorf("UseCase passed corrupted arguments to repository layer")
+			}
+
+			return nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	err := interactor.ArchiveTask(context.Background(), "col-1", "task-1", 0)
+	if err != nil {
+		t.Fatalf("Expected zero errors during clean task archiving, got: %v", err)
+	}
+	if !repositoryCalled {
+		t.Errorf("UseCase failed to delegate task archiving execution to the repository layer")
+	}
+}
+
+func TestArchiveTask_BusinessRuleViolations(t *testing.T) {
+	interactor := NewKanbanInteractor(&mockBoardRepository{})
+
+	// Test case A: Blank parent track container identification exception
+	err := interactor.ArchiveTask(context.Background(), "", "task-1", 0)
+	if err == nil || !strings.Contains(err.Error(), "parent column ID is mandatory") {
+		t.Errorf("Expected blank column verification fault, received: %v", err)
+	}
+
+	// Test case B: Negative position array grid check validation exception
+	err = interactor.ArchiveTask(context.Background(), "col-done", "task-1", -1)
+	if err == nil || !strings.Contains(err.Error(), "task position to archive is mandatory") {
+		t.Errorf("Expected negative position blocker check trigger, received: %v", err)
 	}
 }

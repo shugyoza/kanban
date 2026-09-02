@@ -26,7 +26,7 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 			t.id, t.column_id, t.title, t.description, t.position
 		FROM boards b
 		LEFT JOIN columns c ON b.id = c.board_id
-		LEFT JOIN tasks t ON c.id = t.column_id
+		LEFT JOIN tasks t ON c.id = t.column_id AND t.is_archived = 0
 		WHERE b.id = $1
 		ORDER BY c.position ASC, t.position ASC;
 	`
@@ -86,6 +86,9 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 			})
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate board tree rows: %w", err)
+	}
 
 	// Flatten maps into slices to pass back to the business domain layer.
 	var columns []domain.ColumnAggregate
@@ -138,14 +141,14 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 			// shifting down: push intermediate cards up
 			_, err = tx.ExecContext(
 				ctx, 
-				"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND position <= $3", 
+				"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND position <= $3 AND is_archived = 0", 
 				targetColumnID, currentPosition, targetPosition,
 			)
 		} else if currentPosition > targetPosition {
 			// shifting up: push intermediate cards down
 			_, err = tx.ExecContext(
 				ctx,
-				"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND position < $3",
+				"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND position < $3 AND is_archived = 0",
 				targetColumnID, targetPosition, currentPosition,
 			)
 		}
@@ -153,7 +156,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 		// Moving across columns: clear the gap in the old column lane
 		_, err = tx.ExecContext(
 			ctx,
-			"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2",
+			"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0",
 			currentColumnID, currentPosition,
 		)
 		if err != nil {
@@ -163,7 +166,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 		// open up a placeholder index slot in the new target column lane
 		_, err = tx.ExecContext(
 			ctx,
-			"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2",
+			"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND is_archived = 0",
 			targetColumnID, targetPosition,
 		)
 	}
@@ -201,7 +204,7 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 	// to make room for a brand new task at position 0
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET position = position + 1 WHERE column_id = $1",
+		"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND is_archived = 0",
 		columnID,
 	)
 	if err != nil {
@@ -214,8 +217,8 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 
 	// 3. EXECUTE THE WRITE: Save the clean parameters permanently to the table rows
 	query := `
-	INSERT INTO tasks (id, column_id, title, description, position, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	INSERT INTO tasks (id, column_id, title, description, position, is_archived, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err = tx.ExecContext(ctx, query, newID, columnID, title, description, defaultPosition)
 	if err != nil {
@@ -259,8 +262,10 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 	}
 
 	// Re-index all the rows within the column
-	gapQuery := "UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2"
-	_, err = tx.ExecContext(ctx, gapQuery, columnID, deletedTaskPosition)
+	_, err = tx.ExecContext(
+		ctx, 
+		"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0", 
+		columnID, deletedTaskPosition)
 	if err != nil {
 		return fmt.Errorf("failed to close position gap following deletion: %w", err)
 	}
@@ -289,6 +294,42 @@ func (r *SQLBoardRepository) UpdateTaskDetails(ctx context.Context, taskID strin
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("no task found with ID: %s", taskID)
+	}
+
+	return nil
+}
+
+func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,taskID string, taskPosition int) error {
+	// 1. Initialize a strict ACID db transaction block
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start archiving transaction: %w", err)
+	}
+
+	defer tx.Rollback()
+
+	// 2. Mark the task as archived in the database
+	_, err = tx.ExecContext(
+		ctx, 
+		"UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1", 
+		taskID)
+	if err != nil {
+		return fmt.Errorf("failed to archive task: %w", err)
+	}
+
+	// 3. Re-index all the rows within the column to close any gaps left by the archived task
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0",
+		columnID, taskPosition,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to re-index tasks after archiving: %w", err)
+	}
+
+	// 4. Explicitly commit the transaction permanently to disk file storage
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to finalize task archiving transaction: %w", err)
 	}
 
 	return nil

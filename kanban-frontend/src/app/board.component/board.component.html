@@ -52,19 +52,28 @@
                     </button>
 
                     <div class="task-action-bar">
+                        <button type="button" class="edit-card-btn" (click)="kanbanService.startEditingTask(task)"
+                            [attr.aria-label]="'Edit task: ' + task.title" title="Edit card">
+
+                            <span class="material-symbols-outlined">
+                                edit
+                            </span>
+                        </button>
+
+                        <button type="button" class="archive-card-btn"
+                            (click)="kanbanService.archiveTask(column.id, task.id, task.position)" title="Archive task"
+                            [attr.aria-label]="'Archive task: ' + task.title">
+                            <span class="material-symbols-outlined">
+                                archive
+                            </span>
+                        </button>
+
                         <button type="button" class="delete-card-btn"
                             (click)="kanbanService.deleteTask(column.id, task.id, task.position)"
                             [attr.aria-label]="'Delete task: ' + task.title" title="Delete card forever">
 
                             <span class="material-symbols-outlined">
                                 delete_forever
-                            </span>
-                        </button>
-                        <button type="button" class="edit-card-btn" (click)="kanbanService.startEditingTask(task)"
-                            [attr.aria-label]="'Edit task: ' + task.title" title="Edit card">
-
-                            <span class="material-symbols-outlined">
-                                edit
                             </span>
                         </button>
                     </div>

@@ -6,6 +6,7 @@ export interface Task {
     title: string;
     description: string;
     position: number;
+    isArchived?: boolean;
 }
 
 export interface ColumnAggregate {

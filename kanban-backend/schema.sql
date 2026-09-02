@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     position INT NOT NULL, -- Tracks the top-to-bottom order of tasks within a column
+    is_archived INT DEFAULT 0, -- 0 for active, 1 for archived (soft deletion). Using int instead of boolean for SQLite compatibility.
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (column_id) REFERENCES columns (id) ON DELETE CASCADE

@@ -37,6 +37,12 @@ type UpdateTaskPayload struct {
 	Description string `json:"description"`
 }
 
+type ArchiveTaskPayload struct {
+	ColumnID string `json:"columnId"`
+	TaskID string `json:"taskId"`
+	TaskPosition int `json:"taskPosition"`
+}
+
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
 func NewKanbanHandler(uc domain.KanbanUseCase) *KanbanHandler {
 	return &KanbanHandler{
@@ -192,6 +198,30 @@ func (h *KanbanHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error executing task update workflow: %v", err)
 	
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
+	var payload ArchiveTaskPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	err := h.useCase.ArchiveTask(r.Context(), payload.ColumnID, payload.TaskID, payload.TaskPosition)
+	if err != nil {
+		log.Printf("Error executing task archiving workflow: %v", err)
+
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

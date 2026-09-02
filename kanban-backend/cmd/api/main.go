@@ -84,6 +84,7 @@ func main() {
 	http.HandleFunc("POST /api/tasks", kanbanHandler.HandleTask)
 	http.HandleFunc("DELETE /api/tasks", kanbanHandler.HandleTask)
 	http.HandleFunc("PATCH /api/tasks", kanbanHandler.UpdateTask)
+	http.HandleFunc("PATCH /api/tasks/archive", kanbanHandler.ArchiveTask)
 
 	serverPort := ":8080"
 	// Fire up the native Go local web server

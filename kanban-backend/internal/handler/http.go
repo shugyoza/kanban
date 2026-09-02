@@ -211,6 +211,12 @@ func (h *KanbanHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
+	// 1. Enforce strict HTTP method checking
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var payload ArchiveTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)

@@ -2,24 +2,7 @@
     margin-bottom: 12px;
 }
 
-.add-task-btn {
-    width: 100%;
-    padding: 8px;
-    border: none;
-    background: transparent;
-    color: #5e6c84;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    text-align: left;
-}
-
-.add-task-btn:hover {
-    background-color: rgba(9, 30, 66, .08);
-    color: #172b4d;
-}
-
-.create-task-form {
+.edit-task-form {
     background: white;
     padding: 8px;
     border-radius: 4px;

@@ -1,5 +1,7 @@
+<section class="form-wrapper">
     <form class="edit-task-form" (submit)="$event.preventDefault();taskEvent.emit('submit')">
-        <input type="text" placeholder="Enter task title..." class="task-input-title" [formField]="editTaskForm.title" />
+        <input type="text" placeholder="Enter task title..." class="task-input-title"
+            [formField]="editTaskForm.title" />
         <span>
             {{ editTaskForm.title().errors()?.[0]?.message }}
         </span>
@@ -9,7 +11,8 @@
             {{ editTaskForm.description().errors()?.[0]?.message }}
         </span>
         <section class="form-actions">
-            <button type="submit" class="submit-btn" [disabled]="editTaskForm.title().invalid() || editTaskForm.description().invalid()">
+            <button type="submit" class="submit-btn"
+                [disabled]="editTaskForm.title().invalid() || editTaskForm.description().invalid()">
                 Submit
             </button>
             <button type="button" class="cancel-btn" (click)="taskEvent.emit('cancel')">
@@ -17,3 +20,4 @@
             </button>
         </section>
     </form>
+</section>

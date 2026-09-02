@@ -1,3 +1,13 @@
+
+button {
+    /* Reset browser native button styles */
+    border: none;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+    display: block;
+}
+
 .board-container {
     padding: 24px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -51,14 +61,6 @@
     margin-bottom: 8px;
     box-shadow: 0 1px 0 rgba(9, 30, 66, .25);
     cursor: grab;
-
-    /* Reset browser native button styles */
-    border: none;
-    text-align: left;
-    font-family: inherit;
-    width: 100%;
-    display: block;
-
 }
 
 /* ensure active dragging targets retain native styling values */
@@ -74,6 +76,7 @@
 .task-action-bar {
     display: flex;
     align-items: center;
+    flex-direction: column;
 }
 
 .task-title {
@@ -121,7 +124,8 @@
     opacity: 0.4;
 }
 
-.delete-card-btn {
+.delete-card-btn,
+.edit-card-btn {
     background-color: transparent;
     border: none;
     cursor: pointer;
@@ -134,11 +138,30 @@
     transition: background-color 150ms ease;
 }
 
-.delete-card-btn:hover {
+.delete-card-btn:hover,
+.edit-card-btn:hover {
     background-color: #ffebe6;
 }
 
-.delete-card-btn:focus-visible {
+.delete-card-btn:focus-visible,
+.edit-card-btn:focus-visible {
     outline: 2px solid #0052cc;
     outline-offset: 2px;
+}
+
+.add-task-btn {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: #5e6c84;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+}
+
+.add-task-btn:hover {
+    background-color: rgba(9, 30, 66, .08);
+    color: #172b4d;
 }

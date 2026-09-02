@@ -2,86 +2,83 @@
 
 <section class="board-container">
     @if (!kanbanService.isLoaded()) {
-        <div class="loading-spinner">
-            Connecting to Go backend, loading workspace...
-        </div>
+    <div class="loading-spinner">
+        Connecting to Go backend, loading workspace...
+    </div>
     } @else {
-        <h1 class="board-title">
-            {{ board?.title }}
-        </h1>
+    <h1 class="board-title">
+        {{ board?.title }}
+    </h1>
 
-        <!-- 1. Enforce a broad drop-list grouping boundary across all columns -->
-        <div class="columns-wrapper" cdkDropListGroup>
-            @for (column of board?.columns; track column.id) {
-                <div class="column-card">
-                    <h2 class="column-title">
-                        {{ column.title }}
-                    </h2>
+    <!-- 1. Enforce a broad drop-list grouping boundary across all columns -->
+    <div class="columns-wrapper" cdkDropListGroup>
+        @for (column of board?.columns; track column.id) {
+        @let isFirstColumn = $index === 0;
+        @let isNewTask = !kanbanService.taskIdOnEdit();
+        <div class="column-card">
+            <h2 class="column-title">
+                {{ column.title }}
+            </h2>
 
-                    @if ($index === 0) {
-                        @if (!isEditTaskFormOpen() && !taskIdOnEdit()) {
-                            <button class="add-task-btn" (click)="isEditTaskFormOpen.set(true)">Add a Task</button>
-                        } @else {
-                            <app-edit-task (taskEvent)="handleTaskEvent(column.id, $event)" />
-                        }
-                    }
+            @if (isFirstColumn && isNewTask && !kanbanService.isEditTaskFormOpen()) {
+            <button class="add-task-btn" (click)="kanbanService.isEditTaskFormOpen.set(true)">Add a Task</button>
+            }
+            @else if (isFirstColumn && isNewTask && kanbanService.isEditTaskFormOpen()) {
+            <app-edit-task (taskEvent)="kanbanService.handleTaskEvent(column.id, $event)" />
+            }
 
-                    <!-- 2. Turn this container into a registered list drop zone -->
-                    <div class="tasks-list" cdkDropList [id]="column.id" [cdkDropListData]="column.tasks" (cdkDropListDropped)="onCardDropped($event)">
-                        @for (task of column.tasks; track task.id) {
-                            <!-- 3. Mark each separate item container as an independently draggable card node -->
-                            <div class="task-grid-row">
-                                <button
-                                    type="button"
-                                    class="task-item"
-                                    cdkDrag
-                                    [attr.aria-label]="'Drag task: ' + task.title">
-                                    <h3 class="task-title">
-                                        {{ task.title }}
-                                    </h3>
-                                    <p class="task-desc">
-                                        {{ task.description }}
-                                    </p>
-                                    <!-- 4. Structural preview placeholder shadow that displays where a card will land during sorting animations -->
-                                     <div class="task-placeholder" *cdkDragPlaceholder></div>
-                                </button>
 
-                                <div class="task-action-bar">
-                                    <button
-                                        type="button"
-                                        class="delete-card-btn"
-                                        (click)="deleteTask(column.id, task.id, task.position)"
-                                        [attr.aria-label]="'Delete task: ' + task.title"
-                                        title="Delete card forever">
-                                    
-                                        <span class="material-symbols-outlined">
-                                            delete_forever
-                                        </span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="edit-card-btn"
-                                        (click)="startEditingTask(task.id)"
-                                        [attr.aria-label]="'Edit task: ' + task.title"
-                                        title="Edit card">
-                                    
-                                        <span class="material-symbols-outlined">
-                                            edit
-                                        </span>
-                                    </button>
+            <!-- 2. Turn this container into a registered list drop zone -->
+            <div class="tasks-list" cdkDropList [id]="column.id" [cdkDropListData]="column.tasks"
+                (cdkDropListDropped)="onCardDropped($event)">
+                @for (task of column.tasks; track task.id) {
+                <!-- 3. Mark each separate item container as an independently draggable card node -->
+                @let isEditingThisTask = kanbanService.taskIdOnEdit() === task.id;
 
-                                </div>
+                @if (isEditingThisTask) {
+                <app-edit-task (taskEvent)="kanbanService.handleTaskEvent(column.id, $event)" />
+                }
+                @else {
+                <div class="task-grid-row">
+                    <button type="button" class="task-item" cdkDrag [attr.aria-label]="'Drag task: ' + task.title">
+                        <h3 class="task-title">
+                            {{ task.title }}
+                        </h3>
+                        <p class="task-desc">
+                            {{ task.description }}
+                        </p>
+                        <!-- 4. Structural preview placeholder shadow that displays where a card will land during sorting animations -->
+                        <div class="task-placeholder" *cdkDragPlaceholder></div>
+                    </button>
 
-                            </div>
-                        }
-                        @empty {
-                            <div class="empty-column-msg">
-                                No tasks here yet. Drop cards here!
-                            </div>
-                        }
+                    <div class="task-action-bar">
+                        <button type="button" class="delete-card-btn"
+                            (click)="kanbanService.deleteTask(column.id, task.id, task.position)"
+                            [attr.aria-label]="'Delete task: ' + task.title" title="Delete card forever">
+
+                            <span class="material-symbols-outlined">
+                                delete_forever
+                            </span>
+                        </button>
+                        <button type="button" class="edit-card-btn" (click)="kanbanService.startEditingTask(task)"
+                            [attr.aria-label]="'Edit task: ' + task.title" title="Edit card">
+
+                            <span class="material-symbols-outlined">
+                                edit
+                            </span>
+                        </button>
                     </div>
                 </div>
-            }
+                }
+                }
+                @empty {
+                <div class="empty-column-msg">
+                    No tasks here yet. Drop cards here!
+                </div>
+                }
+            </div>
         </div>
+        }
+    </div>
     }
 </section>

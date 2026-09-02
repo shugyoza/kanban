@@ -21,11 +21,15 @@ export interface BoardAggregate {
     columns: ColumnAggregate[];
 }
 
-export interface TaskCreateDTO {
+export interface TaskEdit {
   title: string;
   description: string;
 }
 
-export interface TaskUpdateDTO extends TaskCreateDTO {
+export interface TaskCreateDTO extends TaskEdit {
+  columnId: string;
+}
+
+export interface TaskUpdateDTO extends TaskEdit {
   taskId: string;
 }

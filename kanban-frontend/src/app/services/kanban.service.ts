@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task } from '../models/kanban.model';
+import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task, TaskEdit } from '../models/kanban.model';
 import { catchError, of } from 'rxjs';
 import { form, maxLength, required } from '@angular/forms/signals';
 
-const INITIAL_TASK: TaskCreateDTO = {
+const INITIAL_TASK: TaskEdit = {
     title: '',
     description: ''
 }
@@ -20,8 +20,8 @@ export class KanbanService {
     public readonly board = this.boardState.asReadonly();
     public readonly isLoaded = computed<boolean>(() => this.boardState() !== null);
     public readonly taskIdOnEdit = signal<string | null>(null);
-    public readonly isCreateTaskFormOpen = signal<boolean>(false);
-    public readonly editTaskModel = signal<TaskCreateDTO>({ ...INITIAL_TASK });
+    public readonly isEditTaskFormOpen = signal<boolean>(false);
+    public readonly editTaskModel = signal<TaskEdit>({ ...INITIAL_TASK });
     public readonly editTaskForm = form(this.editTaskModel, schemaPath => {
         required(schemaPath.title, { message: 'Title is required' });
         required(schemaPath.description, { message: 'Description is required' });
@@ -112,10 +112,10 @@ export class KanbanService {
 
     public handleTaskEvent(columnId: string, $event: 'submit' | 'cancel'): void {
         if ($event === 'cancel') {
-            this.isCreateTaskFormOpen.set(false);
+            this.isEditTaskFormOpen.set(false);
             this.taskIdOnEdit.set(null);
             this.editTaskForm().reset({ ...INITIAL_TASK });
-            
+
             return;
         }
 
@@ -127,6 +127,71 @@ export class KanbanService {
 
         // Capture snapshot to rollback current state if API call failed
         const rollbackSnapshot = { ...currentBoard };
+
+        const taskId = this.taskIdOnEdit()
+        const isTaskEdit = !!this.taskIdOnEdit();
+
+        if (isTaskEdit) {
+
+            // Deep copy columns and push existing cards down to clear index 0
+            const updatedColumns = currentBoard.columns.map(col => {
+                if (col.id !== columnId) {
+                    return { ...col, tasks: [...col.tasks] };
+                }
+
+                const updatedTasks = col.tasks.map(t => {
+                    if (t.id === taskId) {
+                        return {
+                            ...t,
+                            title,
+                            description
+                        }
+                    }
+
+                    return {
+                        ...t,
+                    }
+                })
+
+                return {
+                    ...col,
+                    tasks: updatedTasks
+                }
+            })
+
+            // Optimistic update
+            this.boardState.set({
+                ...currentBoard,
+                columns: updatedColumns
+            });
+
+            const payload: TaskUpdateDTO = {
+                taskId: taskId!,
+                title,
+                description
+            }
+
+            this.http.patch<Task>('/api/tasks', payload).pipe(
+                catchError(error => {
+                    console.error(error);
+                    alert('Failed to save your changes. Reverting changes...');
+                    this.boardState.set(rollbackSnapshot);
+
+                    return of(null)
+                })
+            ).subscribe({
+                next: () => {
+
+                    // reset the create task form
+                    this.editTaskForm().reset({ ...INITIAL_TASK });
+                    this.isEditTaskFormOpen.set(false);
+                    this.taskIdOnEdit.set(null);
+                }
+            })
+
+            return;
+        }
+
         // Create client-side id to trace the visual node
         const tempId = `temp-${Date.now()}`;
 
@@ -164,7 +229,7 @@ export class KanbanService {
         })
 
         // Trigger Http call
-        const payload = {
+        const payload: TaskCreateDTO = {
             columnId,
             title,
             description
@@ -187,7 +252,7 @@ export class KanbanService {
                 if (!finalizedBoard) return;
 
                 const alignedColumns = finalizedBoard.columns.map(col => {
-                    if (col.id !== columnId) return { ...col, tasks: [ ...col.tasks ]};
+                    if (col.id !== columnId) return { ...col, tasks: [...col.tasks] };
 
                     return {
                         ...col,
@@ -212,7 +277,7 @@ export class KanbanService {
 
                 // reset the create task form
                 this.editTaskForm().reset({ ...INITIAL_TASK });
-                this.isCreateTaskFormOpen.set(false);
+                this.isEditTaskFormOpen.set(false);
             }
         })
     }
@@ -225,7 +290,7 @@ export class KanbanService {
 
         const updatedColumns = currentBoard.columns.map(col => {
             if (col.id !== columnId) {
-                return { ...col, tasks: [...col.tasks]}
+                return { ...col, tasks: [...col.tasks] }
             }
 
             const filteredTasks = col.tasks.filter(t => t.id !== taskId);
@@ -265,7 +330,11 @@ export class KanbanService {
         ).subscribe()
     }
 
-    public startEditingTask(taskId: string): void {
-        this.taskIdOnEdit.set(taskId);
+    public startEditingTask(task: Task): void {
+        this.taskIdOnEdit.set(task.id);
+        this.editTaskForm().reset({
+            description: task.description,
+            title: task.title
+        })
     }
 }

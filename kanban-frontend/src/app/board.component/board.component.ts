@@ -12,9 +12,6 @@ import { EditTaskComponent } from '../components/edit-task/edit-task.component';
 })
 export class BoardComponent implements OnInit {
   protected readonly kanbanService = inject(KanbanService);
-  protected readonly taskIdOnEdit = computed<string | null>(() => this.kanbanService.taskIdOnEdit());
-  protected readonly isEditTaskFormOpen = this.kanbanService.isCreateTaskFormOpen;
-
 
   ngOnInit(): void {
     this.kanbanService.loadBoard('board-kanban-1')
@@ -45,24 +42,5 @@ export class BoardComponent implements OnInit {
       column,
       row
     )
-  }
-
-  protected deleteTask(columnId: string, taskId: string, taskPosition: number): void {
-    this.kanbanService.deleteTask(columnId, taskId, taskPosition)
-  }
-
-  protected handleTaskEvent(columnId: string, $event: 'submit' | 'cancel'): void {
-    switch ($event) {
-      case 'cancel':
-        this.kanbanService.isCreateTaskFormOpen.set(false)
-        break;
-      default:
-        this.kanbanService.handleTaskEvent(columnId, $event)
-        break;
-    }
-  }
-
-  protected startEditingTask(taskId: string): void {
-    this.kanbanService.taskIdOnEdit.set(taskId)
   }
 }

@@ -142,3 +142,24 @@ func (uc *KanbanInteractor) ArchiveTask(ctx context.Context, columnID string, ta
 
 	return nil
 }
+
+func (uc *KanbanInteractor) UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+	if columnID == "" {
+		return fmt.Errorf("business rule violation: parent column ID is mandatory for restoring archived task")
+	}
+
+	if taskID == "" {
+		return fmt.Errorf("business rule violation: task ID to is mandatory for restoring archived task")
+	}
+
+	if taskPosition < 0 {
+		return fmt.Errorf("business rule violation: task position to archive is mandatory for restoring archived task")
+	}
+
+	err := uc.repo.ArchiveTask(ctx, columnID, taskID, taskPosition)
+	if err != nil {
+		return fmt.Errorf("usecase failed to execute restoring of archived task: %w", err)
+	}
+
+	return nil
+}

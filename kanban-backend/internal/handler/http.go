@@ -239,3 +239,33 @@ func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *KanbanHandler) UnarchiveTask(w http.ResponseWriter, r *http.Request) {
+	// 1. Enforce strict HTTP method checking
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload ArchiveTaskPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	err := h.useCase.UnarchiveTask(r.Context(), payload.ColumnID, payload.TaskID, payload.TaskPosition)
+	if err != nil {
+		log.Printf("Error executing task un-archiving workflow: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

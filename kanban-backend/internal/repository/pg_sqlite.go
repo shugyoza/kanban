@@ -334,3 +334,39 @@ func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,ta
 
 	return nil
 }
+
+func (r *SQLBoardRepository) UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+	// 1. Initialize a strict ACID db transaction block
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start un-archiving transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 2. Re-index all the rows within the column to make room for the un-archived task
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND is_archived = 0",
+		columnID, taskPosition,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to re-index tasks before un-archiving: %w", err)
+	}
+
+	// 3. Mark the task as un-archived in the database
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE tasks SET is_archived = 0, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+		taskID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to un-archive task: %w", err)
+	}
+
+	// 4. Explicitly commit the transaction permanently to disk file storage
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to finalize task un-archiving transaction: %w", err)
+	}
+
+	return nil
+}

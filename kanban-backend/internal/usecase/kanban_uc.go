@@ -163,3 +163,16 @@ func (uc *KanbanInteractor) UnarchiveTask(ctx context.Context, columnID string, 
 
 	return nil
 }
+
+func (uc *KanbanInteractor) GetArchivedTasks(ctx context.Context, boardID string) ([]domain.Task, error) {
+	if boardID == "" {
+		return nil, fmt.Errorf("business rule violation: board ID is mandatory for retrieving archived tasks")
+	}
+
+	archivedTasks, err := uc.repo.GetArchivedTasks(ctx, boardID)
+	if err != nil {
+		return nil, fmt.Errorf("usecase failed to retrieve archived tasks: %w", err)
+	}
+
+	return archivedTasks, nil
+}

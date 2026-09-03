@@ -269,3 +269,38 @@ func (h *KanbanHandler) UnarchiveTask(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request) {
+	// 1. Enforce strict HTTP method checking
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	boardID := r.URL.Query().Get("boardId")
+	if boardID == "" {
+		http.Error(w, "Missing required board 'boardId' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	archivedTasks, err := h.useCase.GetArchivedTasks(r.Context(), boardID)
+	if err != nil {
+		log.Printf("Error retrieving archived tasks: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, "Internal server retrieval failure", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(archivedTasks); err != nil {
+		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+		return
+	}
+}

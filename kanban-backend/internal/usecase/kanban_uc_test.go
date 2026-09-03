@@ -19,6 +19,7 @@ type mockBoardRepository struct {
 	updateTaskDetails func(ctx context.Context, taskID string, title string, description string) error
 	archiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	unarchiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
+	getArchivedTasks func(ctx context.Context, boardID string) ([]domain.Task, error)
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
@@ -48,6 +49,10 @@ func (m *mockBoardRepository) ArchiveTask(ctx context.Context, columnID string, 
 
 func (m *mockBoardRepository) UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
 	return m.unarchiveTask(ctx, columnID, taskID, taskPosition)
+}
+
+func (m *mockBoardRepository) GetArchivedTasks(ctx context.Context, boardID string) ([]domain.Task, error) {
+	return m.getArchivedTasks(ctx, boardID)
 }
 
 // 3. The unit test function
@@ -312,5 +317,41 @@ func TestUnarchiveTask_BusinessRuleViolations(t *testing.T) {
 	err = interactor.UnarchiveTask(context.Background(), "col-done", "task-1", -1)
 	if err == nil || !strings.Contains(err.Error(), "task position to archive is mandatory") {
 		t.Errorf("Expected negative position blocker check trigger, received: %v", err)
+	}
+}
+
+func TestGetArchivedTasks_Success(t *testing.T) {
+	mockRepo := &mockBoardRepository{
+		getArchivedTasks: func(ctx context.Context, boardID string) ([]domain.Task, error) {
+			return []domain.Task{
+				{ID: "task-archived-1", ColumnID: "col-archived", Title: "Archived Task 1", Description: "This is an archived task", Position: 0},
+				{ID: "task-archived-2", ColumnID: "col-archived", Title: "Archived Task 2", Description: "This is another archived task", Position: 1},
+			}, nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	tasks, err := interactor.GetArchivedTasks(context.Background(), "board-1")
+
+	if err != nil {
+		t.Fatalf("Expected zero errors during fetching archived tasks, got: %v", err)
+	}
+
+	if len(tasks) != 2 {
+		t.Errorf("Expected 2 archived tasks, but got %d", len(tasks))
+	}
+
+	if tasks[0].ID != "task-archived-1" || tasks[1].ID != "task-archived-2" {
+		t.Errorf("Archived tasks returned do not match expected IDs")
+	}
+}
+
+func TestGetArchivedTasks_BusinessRuleViolation(t *testing.T) {
+	interactor := NewKanbanInteractor(&mockBoardRepository{})
+
+	// Test: attempt to retrieve archived tasks with empty board ID
+	_, err := interactor.GetArchivedTasks(context.Background(), "")
+	if err == nil || !strings.Contains(err.Error(), "board ID is mandatory") {
+		t.Errorf("Expected strict board ID validation error, got: %v", err)
 	}
 }

@@ -370,3 +370,40 @@ func (r *SQLBoardRepository) UnarchiveTask(ctx context.Context, columnID string,
 
 	return nil
 }
+
+func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID string) ([]domain.Task, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT
+			b.id, b.title,
+			c.id, c.title, c.position,
+			t.id, t.column_id, t.title, t.description, t.position
+		FROM boards b
+		LEFT JOIN columns c ON b.id = c.board_id
+		LEFT JOIN tasks t on c.id = t.column_id AND t.is_archived = 1
+		WHERE b.id = $1
+		ORDER BY t.updated_at DESC, t.position ASC
+		`,
+		boardID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query archived tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var archivedTasks []domain.Task
+	for rows.Next() {
+		var t domain.Task
+		err := rows.Scan(&t.ID, &t.ColumnID, &t.Title, &t.Description, &t.Position)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan archived task: %w", err)
+		}
+		archivedTasks = append(archivedTasks, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate archived task rows: %w", err)
+	}
+
+	return archivedTasks, nil
+}

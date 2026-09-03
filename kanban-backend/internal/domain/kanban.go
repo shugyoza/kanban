@@ -37,6 +37,7 @@ type BoardRepository interface {
 	UpdateTaskDetails(ctx context.Context, taskID string, title string, description string) error
 	ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
+	GetArchivedTasks(ctx context.Context, boardID string) ([]Task, error)
 }
 
 // KanbanUseCase defines the business rules available for the Kanban board.
@@ -48,4 +49,5 @@ type KanbanUseCase interface {
 	EditTask(ctx context.Context, taskID string, title string, description string) error
 	ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
+	GetArchivedTasks(ctx context.Context, boardID string) ([]Task, error)
 }

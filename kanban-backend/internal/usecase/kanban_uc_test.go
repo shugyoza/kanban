@@ -18,6 +18,7 @@ type mockBoardRepository struct {
 	deleteTask func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
 	updateTaskDetails func(ctx context.Context, taskID string, title string, description string) error
 	archiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
+	unarchiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
@@ -43,6 +44,10 @@ func (m *mockBoardRepository) UpdateTaskDetails(ctx context.Context, taskID stri
 
 func (m *mockBoardRepository) ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
 	return m.archiveTask(ctx, columnID, taskID, taskPosition)
+}
+
+func (m *mockBoardRepository) UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+	return m.unarchiveTask(ctx, columnID, taskID, taskPosition)
 }
 
 // 3. The unit test function
@@ -265,6 +270,46 @@ func TestArchiveTask_BusinessRuleViolations(t *testing.T) {
 
 	// Test case B: Negative position array grid check validation exception
 	err = interactor.ArchiveTask(context.Background(), "col-done", "task-1", -1)
+	if err == nil || !strings.Contains(err.Error(), "task position to archive is mandatory") {
+		t.Errorf("Expected negative position blocker check trigger, received: %v", err)
+	}
+}
+
+func TestUnarchiveTask_Success(t *testing.T) {
+	repositoryCalled := false
+
+	mockRepo := &mockBoardRepository{
+		unarchiveTask: func(ctx context.Context, columnID string, taskID string, taskPosition int) error {
+			repositoryCalled = true
+			if columnID != "col-1" || taskID != "task-1" || taskPosition != 0 {
+				t.Errorf("UseCase passed corrupted arguments to repository layer")
+			}
+
+			return nil
+		},
+	}
+
+	interactor := NewKanbanInteractor(mockRepo)
+	err := interactor.UnarchiveTask(context.Background(), "col-1", "task-1", 0)
+	if err != nil {
+		t.Fatalf("Expected zero errors during clean archived task restoring, got: %v", err)
+	}
+	if !repositoryCalled {
+		t.Errorf("UseCase failed to delegate archived task restoring execution to the repository layer")
+	}
+}
+
+func TestUnarchiveTask_BusinessRuleViolations(t *testing.T) {
+	interactor := NewKanbanInteractor(&mockBoardRepository{})
+
+	// Test case A: Blank parent track container identification exception
+	err := interactor.UnarchiveTask(context.Background(), "", "task-1", 0)
+	if err == nil || !strings.Contains(err.Error(), "parent column ID is mandatory") {
+		t.Errorf("Expected blank column verification fault, received: %v", err)
+	}
+
+	// Test case B: Negative position array grid check validation exception
+	err = interactor.UnarchiveTask(context.Background(), "col-done", "task-1", -1)
 	if err == nil || !strings.Contains(err.Error(), "task position to archive is mandatory") {
 		t.Errorf("Expected negative position blocker check trigger, received: %v", err)
 	}

@@ -156,7 +156,7 @@ func (uc *KanbanInteractor) UnarchiveTask(ctx context.Context, columnID string, 
 		return fmt.Errorf("business rule violation: task position to archive is mandatory for restoring archived task")
 	}
 
-	err := uc.repo.ArchiveTask(ctx, columnID, taskID, taskPosition)
+	err := uc.repo.UnarchiveTask(ctx, columnID, taskID, taskPosition)
 	if err != nil {
 		return fmt.Errorf("usecase failed to execute restoring of archived task: %w", err)
 	}

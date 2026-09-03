@@ -384,4 +384,55 @@ export class KanbanService {
             })
         ).subscribe()
     }
+
+    public unarchiveTask(archivedTask: Task): void {
+        const currentBoard = this.boardState();
+        if (!currentBoard) return;
+
+        const rollbackSnapshot = { ...currentBoard };
+
+        const updatedColumns = currentBoard.columns.map(col => {
+            if (col.id !== archivedTask.columnId) {
+                return { ...col, tasks: [...col.tasks] }
+            }
+
+            const restoredTask: Task = { ...archivedTask, isArchived: false };
+            const tasksCopy: Task[] = col.tasks.map(t => ({ ...t }));
+
+            // Shift down tasks that are / after the archived task's index/position value
+            tasksCopy.splice(archivedTask.position, 0, restoredTask);
+
+            // Reindex the tasks
+            const reindexedTasks = tasksCopy.map((t, position) => ({
+                ...t,
+                position
+            }))
+
+            return {
+                ...col,
+                tasks: reindexedTasks
+            }
+        })
+
+        this.boardState.set({
+            ...currentBoard,
+            columns: updatedColumns
+        })
+
+        const payload = {
+            columnId: archivedTask.columnId,
+            taskId: archivedTask.id,
+            taskPosition: archivedTask.position
+        }
+
+        this.http.patch('/api/tasks/unarchive', payload).pipe(
+            catchError(error => {
+                console.error(error);
+                this.boardState.set(rollbackSnapshot)
+                
+                return of(null)
+            })
+        ).subscribe()
+    }
 }
+

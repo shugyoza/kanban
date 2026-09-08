@@ -29,3 +29,14 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (column_id) REFERENCES columns (id) ON DELETE CASCADE
   );
+
+-- 1. Users table to capture login credentials
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2.  Establish multi-tenant linkage: tracks which user owns which board layout
+ALTER TABLE boards ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;

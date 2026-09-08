@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task, TaskEdit } from '../models/kanban.model';
-import { catchError, of } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { form, maxLength, required } from '@angular/forms/signals';
+import { rxResource } from '@angular/core/rxjs-interop';
 
 const INITIAL_TASK: TaskEdit = {
     title: '',
@@ -16,8 +17,44 @@ const INITIAL_TASK: TaskEdit = {
 @Service()
 export class KanbanService {
     private readonly http = inject(HttpClient);
-    private readonly boardState = signal<BoardAggregate | null>(null);
-    public readonly board = this.boardState.asReadonly();
+    private readonly boardId = signal<string | null>(null);
+    private readonly version = signal<number>(0);
+    private readonly archiveVersion = signal<number>(0);
+
+    private readonly boardResource = rxResource<BoardAggregate | null, { id: string | null; version: number }>({
+        params: () => ({ 
+            id: this.boardId(),
+            version: this.version()
+        }),
+        stream: ({ params }) => this.getBoard(params.id)
+    })
+
+    private readonly archivedResource = rxResource<Task[], { boardId: string | null; version: number }>({
+        params: () => ({
+            boardId: this.boardId(),
+            version: this.archiveVersion()
+        }),
+        stream: ({ params }) => this.getArchivedTasks(params.boardId)
+    })
+
+    private readonly localBoardState = signal<BoardAggregate | null>(null)
+
+    public readonly archivedTasks = computed<Task[]>(() => this.archivedResource.value() ?? []);
+    public readonly isArchiveDrawerOpen = signal<boolean>(false);
+    public readonly boardState = computed<BoardAggregate | null>(() => {
+        const state = {
+            server: this.boardResource.value() ?? null,
+            local: this.localBoardState()
+        };
+
+        // If User made local optimistic changes, prioritize them
+        if (state.local) {
+            return state.local
+        }
+
+        // Else, return server payload
+        return state.server
+    });
     public readonly isLoaded = computed<boolean>(() => this.boardState() !== null);
     public readonly taskIdOnEdit = signal<string | null>(null);
     public readonly isEditTaskFormOpen = signal<boolean>(false);
@@ -28,18 +65,36 @@ export class KanbanService {
         maxLength(schemaPath.title, 255, { message: 'Maximum 255 characters' })
     });
 
+    protected getBoard(boardId: string | null): Observable<BoardAggregate | null> {
+        if (!boardId) return of(null);
 
-    public loadBoard(boardId: string): void {
-        this.http.get<BoardAggregate>(`/api/boards?id=${boardId}`).pipe(
+        return this.http.get<BoardAggregate>(`/api/boards?id=${boardId}`).pipe(
             catchError(error => {
                 console.error('Data stream resolution failed: ', error);
 
                 return of(null)
             })
-        ).subscribe(data => {
-            this.boardState.set(data)
-        })
+        )
     }
+
+
+    protected getArchivedTasks(boardId: string | null): Observable<Task[]> {
+        if (!!boardId) return of([]);
+
+        return this.http.get<Task[]>(`/api/tasks/archived?boardId=${boardId}`).pipe(
+            catchError(error => {
+                console.error('Data stream resolution failed: ', error);
+
+                return of([])
+            })
+        )
+    }
+
+    public loadBoard(id: string): void {
+        this.localBoardState.set(null);
+        this.boardId.set(id)
+    }
+
 
     public moveTask(
         column: {
@@ -52,6 +107,8 @@ export class KanbanService {
         }
     ): void {
         const currentBoard = this.boardState();
+        // sync server state and local state before processing user changes
+        this.localBoardState.set(currentBoard)
 
         if (!currentBoard) return;
 
@@ -86,7 +143,7 @@ export class KanbanService {
         }
 
         // 6. Push the updated model tree structural package into the state Signal.
-        this.boardState.set({
+        this.localBoardState.set({
             ...currentBoard,
             columns: updatedColumns
         })
@@ -102,12 +159,17 @@ export class KanbanService {
                 console.error(err);
                 alert('Could not save card position. Checking database link...')
 
-                // revert the state signal back
-                this.boardState.set(rollbackSnapshot);
+                // revert the local state signal back
+                this.localBoardState.set(rollbackSnapshot);
 
                 return of(null);
             })
-        ).subscribe();
+        ).subscribe({
+            next: () => {
+                this.version.update(v => v + 1) // increment version to reactively trigger API call for refreshing server state in UI
+                this.localBoardState.set(null); // then reset local state
+            }
+        });
     }
 
     public handleTaskEvent(columnId: string, $event: 'submit' | 'cancel'): void {
@@ -120,6 +182,9 @@ export class KanbanService {
         }
 
         const currentBoard = this.boardState();
+        // sync server state with local state
+        this.localBoardState.set(currentBoard)
+
         const title = this.editTaskModel().title;
         const description = this.editTaskModel().description;
 
@@ -160,7 +225,7 @@ export class KanbanService {
             })
 
             // Optimistic update
-            this.boardState.set({
+            this.localBoardState.set({
                 ...currentBoard,
                 columns: updatedColumns
             });
@@ -175,7 +240,7 @@ export class KanbanService {
                 catchError(error => {
                     console.error(error);
                     alert('Failed to save your changes. Reverting changes...');
-                    this.boardState.set(rollbackSnapshot);
+                    this.localBoardState.set(rollbackSnapshot);
 
                     return of(null)
                 })
@@ -186,6 +251,9 @@ export class KanbanService {
                     this.editTaskForm().reset({ ...INITIAL_TASK });
                     this.isEditTaskFormOpen.set(false);
                     this.taskIdOnEdit.set(null);
+
+                    this.version.update(v => v + 1); // increment version refresh server state by triggering another API call
+                    this.localBoardState.set(null); // then reset local board state
                 }
             })
 
@@ -223,7 +291,7 @@ export class KanbanService {
         })
 
         // Optimistic update
-        this.boardState.set({
+        this.localBoardState.set({
             ...currentBoard,
             columns: updatedColumns
         })
@@ -239,7 +307,7 @@ export class KanbanService {
             catchError(error => {
                 console.error(error);
                 alert('Failed to save your new task. Reverting changes...');
-                this.boardState.set(rollbackSnapshot);
+                this.localBoardState.set(rollbackSnapshot);
 
                 return of(null)
             })
@@ -271,13 +339,17 @@ export class KanbanService {
                 })
 
                 // finalized board state in UI
-                this.boardState.set({
+                this.localBoardState.set({
                     ...finalizedBoard, columns: alignedColumns
                 })
 
                 // reset the create task form
                 this.editTaskForm().reset({ ...INITIAL_TASK });
                 this.isEditTaskFormOpen.set(false);
+
+                this.version.update(v => v + 1); // increment version to trigger API call downloading latest server state
+                this.localBoardState.set(null); // then reset local board state
+
             }
         })
     }
@@ -308,7 +380,7 @@ export class KanbanService {
             }
         })
 
-        this.boardState.set({
+        this.localBoardState.set({
             ...currentBoard,
             columns: updatedColumns
         })
@@ -324,10 +396,15 @@ export class KanbanService {
         this.http.delete('/api/tasks', options).pipe(
             catchError(error => {
                 console.error(error);
-                this.boardState.set(rollbackSnapshot)
+                this.localBoardState.set(rollbackSnapshot)
                 return of(null)
             })
-        ).subscribe()
+        ).subscribe({
+            next: () => {
+                this.version.update(v => v + 1);
+                this.localBoardState.set(null)
+            }
+        })
     }
 
     public startEditingTask(task: Task): void {
@@ -364,7 +441,7 @@ export class KanbanService {
             }
         })
 
-        this.boardState.set({
+        this.localBoardState.set({
             ...currentBoard,
             columns: updatedColumns
         })
@@ -378,11 +455,17 @@ export class KanbanService {
         this.http.patch('/api/tasks/archive', payload).pipe(
             catchError(error => {
                 console.error(error);
-                this.boardState.set(rollbackSnapshot)
-                
+                this.localBoardState.set(rollbackSnapshot)
+
                 return of(null)
-            })
-        ).subscribe()
+            }),
+        ).subscribe({
+            next: () => {
+                this.version.update(v => v + 1);
+                this.archiveVersion.update(v => v + 1);
+                this.localBoardState.set(null);
+            }
+        })
     }
 
     public unarchiveTask(archivedTask: Task): void {
@@ -414,7 +497,7 @@ export class KanbanService {
             }
         })
 
-        this.boardState.set({
+        this.localBoardState.set({
             ...currentBoard,
             columns: updatedColumns
         })
@@ -428,11 +511,17 @@ export class KanbanService {
         this.http.patch('/api/tasks/unarchive', payload).pipe(
             catchError(error => {
                 console.error(error);
-                this.boardState.set(rollbackSnapshot)
-                
+                this.localBoardState.set(rollbackSnapshot)
+
                 return of(null)
             })
-        ).subscribe()
+        ).subscribe({
+            next: () => {
+                this.version.update(v => v + 1);
+                this.archiveVersion.update(v => v + 1);
+                this.localBoardState.set(null)
+            }
+        })
     }
 }
 

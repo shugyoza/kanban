@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"kanban-backend/internal/domain"
 	"slices"
@@ -406,4 +407,52 @@ func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID strin
 	}
 
 	return archivedTasks, nil
+}
+
+// GetUserByUsername locates an account row using a unique username string pattern modifier
+func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	var u domain.User
+	var createdAt string
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT id, username, password_hash, created_at FROM users WHERE username = $1",
+		username,
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found: %s", username)
+		}
+
+		return nil, fmt.Errorf("failed to query user row: %w", err)
+	}
+
+	// Parse your standard database datetime tracker back to native Go time properties
+	u.CreatedAt, _ = time.Parse("2026-01-02 15:04:05", createdAt)
+
+	return &u, nil
+}
+
+// GetUserByID extract account details safely using a clean system primary key identification reference
+func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*domain.User, error) {
+	var u domain.User
+	var createdAt string
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT id, username, password_hash, created_at FROM users WHERE id = $1",
+		userID,
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user id not found: %s", userID)
+		}
+
+		return nil, fmt.Errorf("failed to extract user ID block: %w", err)
+	}
+	
+	// Parse your standard database datetime tracker back to native Go time properties
+	u.CreatedAt, _ = time.Parse("2026-01-02 15:04:05", createdAt)
+
+	return &u, nil
 }

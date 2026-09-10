@@ -74,9 +74,10 @@ func main() {
 
 	// 2. Inject the repository into the Business Logic layer (UseCase Interactor)
 	kanbanUseCase := usecase.NewKanbanInteractor(kanbanRepo)
+	authUseCase := usecase.NewAuthInteractor(kanbanRepo)
 
 	// 3. Inject the UseCase into the Outer Delivery Layer (HTTP Handler Plug)
-	kanbanHandler := handler.NewKanbanHandler(kanbanUseCase)
+	kanbanHandler := handler.NewKanbanHandler(kanbanUseCase, authUseCase)
 
 	// Map handler's method to a real web URL path endpoint
 	http.HandleFunc("GET /api/boards", kanbanHandler.GetBoard)
@@ -89,6 +90,10 @@ func main() {
 	http.HandleFunc("PATCH /api/tasks", kanbanHandler.UpdateTask)
 	http.HandleFunc("POST /api/tasks", kanbanHandler.HandleTask)
 	http.HandleFunc("DELETE /api/tasks", kanbanHandler.HandleTask)
+
+	http.HandleFunc("POST /api/auth/login", kanbanHandler.Login)
+	http.HandleFunc("POST /api/auth/register", kanbanHandler.Register)
+	http.HandleFunc("GET /api/auth/me", kanbanHandler.Authenticate)
 
 	serverPort := ":8080"
 	// Fire up the native Go local web server

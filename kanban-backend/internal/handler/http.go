@@ -15,6 +15,16 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+// RegisterRequest alias LoginRequest as they both use identical struct
+type RegisterRequest = LoginRequest
+
+// UserResponse filters out sensitive fields when sending account profile to the client
+type UserResponse struct {
+	ID string `json:"id"`
+	Username string `json:"username"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type KanbanHandler struct {
 	useCase domain.KanbanUseCase
 	authUseCase domain.AuthUseCase
@@ -351,5 +361,70 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":"authenticated",
+	})
+}
+
+// Register handles requests matching: POST /api/auth/register
+func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+	}
+	defer r.Body.Close()
+
+	user, err := h.authUseCase.Register(r.Context(), req.Username, req.Password)
+	if err != nil {
+		log.Printf("Registration failed for username %s: %v", req.Username, err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		http.Error(w, "Unable to complete registration. Please check your submission constraints.", http.StatusBadRequest)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(UserResponse{
+		ID: user.ID,
+		Username: user.Username,
+		CreatedAt: user.CreatedAt,
+	})
+}
+
+// Authenticate handles requests matching: GET /api/auth/me
+func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 1. Extract secure cookie
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil {
+		http.Error(w, "Unauthorized: No active session cookie found", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.authUseCase.AuthenticateSession(r.Context(), cookie.Value)
+	if err != nil {
+		log.Printf("Session validation failed: %v", err)
+		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(UserResponse{
+		ID: user.ID,
+		Username: user.Username,
+		CreatedAt: user.CreatedAt,
 	})
 }

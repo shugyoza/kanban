@@ -20,8 +20,7 @@ export class AuthService {
             credentials
         ).pipe(
             switchMap(response => {
-                if (response && response.status === 'authenticated') {
-
+                if (!!response && response.status === 'authenticated') {
                     this.currentUser$ = this.getCurrentUser();
 
                     return this.currentUser$;
@@ -31,6 +30,18 @@ export class AuthService {
 
                 return this.currentUser$;
             }),
+        )
+    }
+
+    public logout(): void {
+        this.currentUserState.set(null);
+        this.router.navigate(['/', 'login'])
+    }
+
+    public getCurrentUser(): Observable<User | null> {
+        return this.http.get<User | null>(
+            '/api/auth/me'
+        ).pipe(
             tap(user => {
                 this.currentUserState.set(user)
             }),
@@ -41,16 +52,5 @@ export class AuthService {
                 return throwError(() => error)
             })
         )
-    }
-
-    public logout(): void {
-        this.currentUserState.set(null);
-        this.router.navigate(['/', 'login'])
-    }
-
-    public getCurrentUser() {
-        return this.http.get<User | null>(
-            '/api/auth/me'
-        );
     }
 }

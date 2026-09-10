@@ -409,6 +409,27 @@ func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID strin
 	return archivedTasks, nil
 }
 
+// CreateUser saves a brand new user profile ro cleanly into the database tabla layer
+func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, passwordHash string) (*domain.User, error) {
+	// Generating a high-entropy string ID for fresh record account placeholder
+	newID := fmt.Sprintf("user-%d", time.Now().UnixNano())
+
+	_, err := r.db.ExecContext(
+		ctx,
+		`INSERT INTO users (id, username, password_hash, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP);`,
+		newID, username, passwordHash,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to persist new user profile: %w", err)
+	}
+
+	return &domain.User{
+		ID: newID,
+		Username: username,
+		CreatedAt: time.Now(),
+	}, nil
+}
+
 // GetUserByUsername locates an account row using a unique username string pattern modifier
 func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User

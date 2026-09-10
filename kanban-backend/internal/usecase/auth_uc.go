@@ -57,3 +57,27 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 
 	return user, nil
 }
+
+func (uc *AuthInteractor) Register(ctx context.Context, username string, password string) (*domain.User, error) {
+	if username == "" || password == "" {
+		return nil, fmt.Errorf("business rule violation: credentials cannot be left blank")
+	}
+
+	if len(password) < 8 {
+		return nil, fmt.Errorf("business rule violation: password must be at least 8 characters long")
+	}
+
+	// encrypt password
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("cryptographic failure: failed to securely salt user password: %w", err)
+	}
+
+	// pass the hashed byte representation of the password to the repo method to create a user
+	user, err := uc.userRepo.CreateUser(ctx, username, string(bytes))
+	if err != nil {
+		return nil, fmt.Errorf("usecase failed to persist a new account: %w", err)
+	}
+
+	return user, nil
+}

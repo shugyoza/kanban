@@ -24,5 +24,5 @@ type UserRepository interface {
 type AuthUseCase interface {
 	Register(ctx context.Context, username string, password string) (*User, error)
 	Login(ctx context.Context, username string, password string) (string, error) // Returns a secure session ID string token
-	AuthenticationSession(ctx context.Context, sessionID string) (*User, error)
+	AuthenticateSession(ctx context.Context, sessionID string) (*User, error)
 }

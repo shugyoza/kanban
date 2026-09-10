@@ -6,10 +6,18 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
+
+// LoginRequest captures credentials incoming from the client form elements
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 type KanbanHandler struct {
 	useCase domain.KanbanUseCase
+	authUseCase domain.AuthUseCase
 }
 
 // MoveTaskPayload defines the strict JSON contract from the frontend
@@ -44,9 +52,10 @@ type ArchiveTaskPayload struct {
 }
 
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
-func NewKanbanHandler(uc domain.KanbanUseCase) *KanbanHandler {
+func NewKanbanHandler(uc domain.KanbanUseCase, auc domain.AuthUseCase) *KanbanHandler {
 	return &KanbanHandler{
 		useCase: uc,
+		authUseCase: auc,
 	}
 }
 
@@ -303,4 +312,44 @@ func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
 		return
 	}
+}
+
+// Login handles requests matching: POST /api/auth/login
+func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// 1. Process secure credential checks via UseCase interactor layer logic
+	sessionID, err := h.authUseCase.Login(r.Context(), req.Username, req.Password)
+	if err != nil {
+		log.Printf("Security validation failed for username %s: %v", req.Username, err)
+		http.Error(w, "Invalid credential", http.StatusUnauthorized)
+	}
+
+	// 2. Set HTTP-Only Cookie wrapper to make it completely invisible to malicious JS (XSS protection)
+	http.SetCookie(w, &http.Cookie{
+		Name: "kanban_session",
+		Value: sessionID,
+		Path: "/",
+		Expires: time.Now().Add(24 * time.Hour), // extends cookie session tracking window to 24 hours
+		HttpOnly: true, // protects token strings from document.cookie queries
+		Secure: false, // keep as false strictly for local localhost dev environment
+		SameSite: http.SameSiteLaxMode, // guards system state from CSRF cross-origin attack vectors
+	})
+
+	// 3. Emits a clean JSON verification block back to the user client wire
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":"authenticated",
+	})
 }

@@ -1,14 +1,16 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-
-import { BoardComponent } from './board.component/board.component';
+import { AuthService } from './services/auth.service';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
-  imports: [RouterOutlet, BoardComponent],
+  imports: [RouterOutlet, AsyncPipe],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
 })
 export class App {
+  private readonly authService = inject(AuthService);
   protected readonly title = signal('kanban-frontend');
+  protected user$ = this.authService.getCurrentUser()
 }

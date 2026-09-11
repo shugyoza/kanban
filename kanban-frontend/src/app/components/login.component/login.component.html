@@ -1,1 +1,47 @@
-<p>login.component works!</p>
+<main class="login-container-canvas">
+    <section class="login-card-frame" role="region" aria-label="Account Authorization Entry Gate">
+        <header class="login-header">
+            <h1>
+                Agile Kanban Workspace
+            </h1>
+            <p>
+                Secure full-stack task management dashboard gate
+            </p>
+        </header>
+    </section>
+
+    <form class="login-form-fields" (submit)="handleSubmit($event)">
+
+        <div class="input-group-row">
+            <label for="username">
+                Username Handle
+            </label>
+            <input
+                type="text"
+                id="username"
+                placeholder="Enter your system username..."
+                autocomplete="username"
+                [formField]="loginForm.username" />
+        </div>
+
+        <div class="input-group-row">
+            <label for="password">
+                Security Password
+            </label>
+            <input
+                type="password"
+                id="password"
+                placeholder="********"
+                [formField]="loginForm.password" />
+        </div>
+
+        <footer class="form-action-pillar">
+            <button
+                type="submit"
+                class="login-action-trigger"
+                [disabled]="loginForm().invalid()">
+                {{ loading() ? 'Verifying Authorization...' : 'Unlock Board Canvas' }}    
+            </button>
+        </footer>
+    </form>
+</main>

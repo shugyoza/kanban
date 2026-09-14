@@ -14,6 +14,20 @@ export class AuthService {
     public readonly currentUser = this.currentUserState.asReadonly();
     public readonly isAuthenticated = computed<boolean>(() => !!this.currentUser());
 
+    public register(credentials: Credentials): Observable<User | null> {
+        return this.http.post<User | null>(
+            'api/auth/register',
+            credentials
+        ).pipe(
+            catchError(error => {
+                console.error(error);
+                this.currentUserState.set(null);
+
+                return throwError(() => error)
+            })
+        )
+    }
+
     public login(credentials: Credentials): Observable<User | null> {
         return this.http.post<{ status: string }>(
             '/api/auth/login',

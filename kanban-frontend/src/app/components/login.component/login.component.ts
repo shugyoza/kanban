@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
-import { LoginCredentials } from '../../models/auth.model';
+import { Credentials } from '../../models/auth.model';
 import { form, minLength, required, FormField } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
@@ -14,7 +14,7 @@ import { finalize } from 'rxjs';
 export class LoginComponent {
   private readonly authService = inject(AuthService);
 
-  private readonly credentialsModel = signal<Required<LoginCredentials>>({
+  private readonly credentialsModel = signal<Required<Credentials>>({
     username: '',
     password: ''
   });

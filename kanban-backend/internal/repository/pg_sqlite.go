@@ -477,3 +477,65 @@ func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*d
 
 	return &u, nil
 }
+
+func (r *SQLBoardRepository) GetSessionByID(ctx context.Context, sessionID string) (*domain.Session, error) {
+	var s domain.Session
+	var expiresAt string
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT id, user_id, expires_at FROM sessions WHERE id = $1",
+		sessionID,
+	).Scan(&s.ID, &s.UserID, &s.ExpiresAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("session id not found: %s", sessionID)
+		}
+
+		return nil, fmt.Errorf("failed to extract session id block: %w", err)
+	}
+
+	// Parse your standard database datetime tracker back to native Go time properties
+	s.ExpiresAt, _ = time.Parse("2026-01-02 15:04:05", expiresAt)
+
+	return &s, nil
+}
+
+func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (*domain.Session, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initiate atomic session transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	sessionID := fmt.Sprintf("sess-%d-%s", time.Now().UnixNano(), userID)
+	session := &domain.Session{
+		ID: sessionID,
+		UserID: userID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		"INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?);",
+		session.ID, session.UserID, session.ExpiresAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to persist new session: %w", err)
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		"DELETE FROM sessions WHERE user_id = ? AND expires_at < CURRENT_TIMESTAMP;",
+		session.UserID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process database session cleanup: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit session transaction: %w", err)
+	}
+
+	return session, nil
+}

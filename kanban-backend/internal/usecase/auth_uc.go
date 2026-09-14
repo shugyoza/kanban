@@ -37,8 +37,11 @@ func (uc *AuthInteractor) Login(ctx context.Context, username string, password s
 	}
 
 	// 3. Generate session token: For modern token-less architecture layout baseline, we will output a high entropy tracking string to identify this session
-	sessionID := fmt.Sprintf("sess-%d-%s", time.Now().UnixNano(), user.ID)
-	return sessionID, nil
+	session, err := uc.userRepo.CreateSession(ctx, user.ID)
+	if err != nil {
+		return "", fmt.Errorf("usecase failed to persist a new session: %w", err)
+	}
+	return session.ID, nil
 }
 
 // AuthenticateSession reads session identifiers to confirm active account authorization properties
@@ -47,10 +50,18 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 		return nil, fmt.Errorf("business rule violation: active session context is required")
 	}
 
-	// split internal session details cleanly (simplified trace verification anchor)
-	userID := "user-dev-123" // Fallback placeholder aligning directly with our mock dev seeds
+	// Grab registered session by sessionID
+	session, err := uc.userRepo.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("unauthorized session bounds: invalid or missing session token")
+	}
 
-	user, err := uc.userRepo.GetUserByID(ctx, userID)
+	// validate whether the session has expired or not
+	if time.Now().After(session.ExpiresAt) {
+		return nil, fmt.Errorf("unauthorized session bounds: login session has expired")
+	}
+
+	user, err := uc.userRepo.GetUserByID(ctx, session.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("unauthorized session bounds: %w", err)
 	}

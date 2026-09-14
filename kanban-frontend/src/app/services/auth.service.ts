@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginCredentials, User } from '../models/auth.model';
+import { Credentials, User } from '../models/auth.model';
 import { catchError, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
 @Service()
@@ -14,7 +14,7 @@ export class AuthService {
     public readonly currentUser = this.currentUserState.asReadonly();
     public readonly isAuthenticated = computed<boolean>(() => !!this.currentUser());
 
-    public login(credentials: LoginCredentials): Observable<User | null> {
+    public login(credentials: Credentials): Observable<User | null> {
         return this.http.post<{ status: string }>(
             '/api/auth/login',
             credentials

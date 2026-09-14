@@ -4,7 +4,7 @@ export interface User {
     createdAt: string;
 }
 
-export interface LoginCredentials {
+export interface Credentials {
     username: string;
     password?: string;
 }

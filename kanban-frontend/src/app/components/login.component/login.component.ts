@@ -2,8 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Credentials } from '../../models/auth.model';
 import { form, minLength, required, FormField } from '@angular/forms/signals';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
+import { Router } from '@angular/router';
 
 @Component({
   imports: [FormField],
@@ -13,6 +13,7 @@ import { finalize } from 'rxjs';
 })
 export class LoginComponent {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   private readonly credentialsModel = signal<Required<Credentials>>({
     username: '',
@@ -38,10 +39,13 @@ export class LoginComponent {
 
     this.loading.set(true);
     this.authService.login(this.credentialsModel()).pipe(
-      takeUntilDestroyed(),
       finalize(() => {
         this.loading.set(false)
       })
-    ).subscribe();
+    ).subscribe({
+      next: () => {
+          this.router.navigate(['/', 'board'])
+      }
+    });
   }
 }

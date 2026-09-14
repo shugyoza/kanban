@@ -3,7 +3,6 @@ import { AuthService } from '../../services/auth.service';
 import { Credentials } from '../../models/auth.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { form, FormField, minLength, required } from '@angular/forms/signals';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -41,11 +40,16 @@ export class RegisterComponent {
     }
 
     this.loading.set(true);
-    this.authService.login(this.credentialsModel()).pipe(
-      takeUntilDestroyed(),
+    this.authService.register(this.credentialsModel()).pipe(
       finalize(() => {
         this.loading.set(false)
       })
-    ).subscribe();
+    ).subscribe({
+      next: response => {
+        if (response && response.id && response.username) {
+          this.router.navigate(['/', 'login'])
+        }
+      }
+    });
   }
 }

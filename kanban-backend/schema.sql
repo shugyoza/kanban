@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     FOREIGN KEY (column_id) REFERENCES columns (id) ON DELETE CASCADE
   );
 
+
 -- 1. Users table to capture login credentials
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
@@ -40,3 +41,16 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 2.  Establish multi-tenant linkage: tracks which user owns which board layout
 ALTER TABLE boards ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+
+
+-- Sessions Tracking Table (For stateful session validation)
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY, -- The secure session UUID string
+  user_id TEXT NOT NULL, -- Links back to users table
+  expires_at TIMESTAMP NOT NULL -- Session expiration checkpoint
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+)
+
+-- Index the session ID space for sub-millisecond retrieval lookups
+CREATE INDEX IF NOT EXISTS idx_sessions_id ON sessions(id);

@@ -1,4 +1,8 @@
-<span>
-    {{ (user$ | async)?.username }}
-</span>
-<router-outlet></router-outlet>
+<header class="app-top-bar">
+    <span>
+        Logged in as: {{ (user$ | async)?.username }}
+    </span>
+</header>
+<main #mainContent>
+    <router-outlet></router-outlet>
+</main>

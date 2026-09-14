@@ -1,1 +1,47 @@
-<p>register.component works!</p>
+<div class="register-container-canvas">
+    <section class="register-card-frame" role="region" aria-label="Account Authorization Entry Gate">
+        <header class="register-header">
+            <h1>
+                Create Account
+            </h1>
+            <p>
+                Complete your registration via administrative invitation
+            </p>
+        </header>
+    </section>
+
+    <form class="register-form-fields" (submit)="submitRegister($event)">
+
+        <div class="input-group-row">
+            <label for="username">
+                Username Handle
+            </label>
+            <input
+                type="text"
+                id="username"
+                placeholder="Enter your system username..."
+                autocomplete="username"
+                [formField]="registerForm.username" />
+        </div>
+
+        <div class="input-group-row">
+            <label for="password">
+                Security Password
+            </label>
+            <input
+                type="password"
+                id="password"
+                placeholder="********"
+                [formField]="registerForm.password" />
+        </div>
+
+        <footer class="form-action-pillar">
+            <button
+                type="submit"
+                class="register-action-trigger"
+                [disabled]="registerForm().invalid()">
+                {{ loading() ? 'Creating Account...' : 'Register' }}    
+            </button>
+        </footer>
+    </form>
+</div>

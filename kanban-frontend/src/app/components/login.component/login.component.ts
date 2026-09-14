@@ -27,7 +27,7 @@ export class LoginComponent {
 
   protected readonly loading = signal<boolean>(false);
 
-  protected handleSubmit($event: Event): void {
+  protected submitLogin($event: Event): void {
     $event.preventDefault();
 
     if (this.loginForm().invalid()) {

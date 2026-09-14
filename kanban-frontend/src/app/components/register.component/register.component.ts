@@ -2,12 +2,12 @@ import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Credentials } from '../../models/auth.model';
 import { ActivatedRoute, Router } from '@angular/router';
-import { form, minLength, required } from '@angular/forms/signals';
+import { form, FormField, minLength, required } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 @Component({
-  imports: [],
+  imports: [FormField],
   selector: 'app-register.component',
   styleUrl: './register.component.css',
   templateUrl: './register.component.html',
@@ -31,7 +31,7 @@ export class RegisterComponent {
 
   protected readonly loading = signal<boolean>(false);
 
-  protected handleSubmit($event: Event): void {
+  protected submitRegister($event: Event): void {
     $event.preventDefault();
 
     if (this.registerForm().invalid()) {

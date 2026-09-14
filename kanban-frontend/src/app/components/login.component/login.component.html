@@ -1,4 +1,4 @@
-<main class="login-container-canvas">
+<div class="login-container-canvas">
     <section class="login-card-frame" role="region" aria-label="Account Authorization Entry Gate">
         <header class="login-header">
             <h1>
@@ -10,7 +10,7 @@
         </header>
     </section>
 
-    <form class="login-form-fields" (submit)="handleSubmit($event)">
+    <form class="login-form-fields" (submit)="submitLogin($event)">
 
         <div class="input-group-row">
             <label for="username">
@@ -44,4 +44,4 @@
             </button>
         </footer>
     </form>
-</main>
+</div>

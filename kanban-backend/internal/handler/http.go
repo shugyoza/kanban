@@ -342,7 +342,9 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 	sessionID, err := h.authUseCase.Login(r.Context(), req.Username, req.Password)
 	if err != nil {
 		log.Printf("Security validation failed for username %s: %v", req.Username, err)
-		http.Error(w, "Invalid credential", http.StatusUnauthorized)
+		http.Error(w, "Invalid credential", http.StatusBadRequest)
+
+		return
 	}
 
 	// 2. Set HTTP-Only Cookie wrapper to make it completely invisible to malicious JS (XSS protection)
@@ -356,12 +358,7 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode, // guards system state from CSRF cross-origin attack vectors
 	})
 
-	// 3. Emits a clean JSON verification block back to the user client wire
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":"authenticated",
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Register handles requests matching: POST /api/auth/register
@@ -377,7 +374,7 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	user, err := h.authUseCase.Register(r.Context(), req.Username, req.Password)
+	_, err := h.authUseCase.Register(r.Context(), req.Username, req.Password)
 	if err != nil {
 		log.Printf("Registration failed for username %s: %v", req.Username, err)
 
@@ -390,13 +387,7 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to complete registration. Please check your submission constraints.", http.StatusBadRequest)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(UserResponse{
-		ID: user.ID,
-		Username: user.Username,
-		CreatedAt: user.CreatedAt,
-	})
 }
 
 // Authenticate handles requests matching: GET /api/auth/me

@@ -53,11 +53,12 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 	// Grab registered session by sessionID
 	session, err := uc.userRepo.GetSessionByID(ctx, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("unauthorized session bounds: invalid or missing session token")
+		return nil, fmt.Errorf("unauthorized session bounds: invalid or missing session token: %w", err)
 	}
 
 	// validate whether the session has expired or not
-	if time.Now().UTC().After(session.ExpiresAt) {
+	now := time.Now().UTC()
+	if now.After(session.ExpiresAt) {
 		return nil, fmt.Errorf("unauthorized session bounds: login session has expired")
 	}
 

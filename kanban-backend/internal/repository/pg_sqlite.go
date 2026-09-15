@@ -433,13 +433,12 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 // GetUserByUsername locates an account row using a unique username string pattern modifier
 func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User
-	var createdAt string
 
 	err := r.db.QueryRowContext(
 		ctx,
 		"SELECT id, username, password_hash, created_at FROM users WHERE username = $1",
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user not found: %s", username)
@@ -448,22 +447,18 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 		return nil, fmt.Errorf("failed to query user row: %w", err)
 	}
 
-	// Parse your standard database datetime tracker back to native Go time properties
-	u.CreatedAt, _ = time.Parse("2026-01-02 15:04:05", createdAt)
-
 	return &u, nil
 }
 
 // GetUserByID extract account details safely using a clean system primary key identification reference
 func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*domain.User, error) {
 	var u domain.User
-	var createdAt string
 
 	err := r.db.QueryRowContext(
 		ctx,
 		"SELECT id, username, password_hash, created_at FROM users WHERE id = $1",
 		userID,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user id not found: %s", userID)
@@ -472,19 +467,15 @@ func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*d
 		return nil, fmt.Errorf("failed to extract user ID block: %w", err)
 	}
 	
-	// Parse your standard database datetime tracker back to native Go time properties
-	u.CreatedAt, _ = time.Parse("2026-01-02 15:04:05", createdAt)
-
 	return &u, nil
 }
 
 func (r *SQLBoardRepository) GetSessionByID(ctx context.Context, sessionID string) (*domain.Session, error) {
 	var s domain.Session
-	var expiresAt string
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, user_id, expires_at FROM sessions WHERE id = $1",
+		"SELECT id, user_id, expires_at FROM sessions WHERE id = ?",
 		sessionID,
 	).Scan(&s.ID, &s.UserID, &s.ExpiresAt)
 	if err != nil {
@@ -494,9 +485,6 @@ func (r *SQLBoardRepository) GetSessionByID(ctx context.Context, sessionID strin
 
 		return nil, fmt.Errorf("failed to extract session id block: %w", err)
 	}
-
-	// Parse your standard database datetime tracker back to native Go time properties
-	s.ExpiresAt, _ = time.Parse("2026-01-02 15:04:05", expiresAt)
 
 	return &s, nil
 }
@@ -508,32 +496,40 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 	}
 	defer tx.Rollback()
 
-	sessionID := fmt.Sprintf("sess-%d-%s", time.Now().UnixNano(), userID)
+	now := time.Now().UTC()
+	sessionID := fmt.Sprintf("sess-%d-%s", now.UnixNano(), userID)
 	session := &domain.Session{
 		ID: sessionID,
 		UserID: userID,
-		ExpiresAt: time.Now().Add(24 * time.Hour).UTC(), // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+		ExpiresAt: now.Add(24 * time.Hour), // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
 	}
 
-	_, err = tx.ExecContext(
-		ctx,
-		"INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?);",
-		session.ID, session.UserID, session.ExpiresAt,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to persist new session: %w", err)
-	}
+	// Enforce the timezone format to sync with sqlite implementation
+	formattedNow := now.Format(domain.SQLiteTimeLayout)
+	formattedExpiresAt := session.ExpiresAt.Format(domain.SQLiteTimeLayout)
 
+	// Performs expired session clean up first.
 	_, err = tx.ExecContext(
 		ctx,
-		"DELETE FROM sessions WHERE user_id = ? AND expires_at < CURRENT_TIMESTAMP;",
-		session.UserID,
+		"DELETE FROM sessions WHERE user_id = ? AND expires_at < ?;",
+		session.UserID, formattedNow,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process database session cleanup: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
+	// Create a session for this current one
+	_, err = tx.ExecContext(
+		ctx,
+		"INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?);",
+		session.ID, session.UserID, formattedExpiresAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to persist new session: %w", err)
+	}
+
+
+	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit session transaction: %w", err)
 	}
 

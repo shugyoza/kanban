@@ -57,7 +57,7 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 	}
 
 	// validate whether the session has expired or not
-	if time.Now().After(session.ExpiresAt) {
+	if time.Now().UTC().After(session.ExpiresAt) {
 		return nil, fmt.Errorf("unauthorized session bounds: login session has expired")
 	}
 

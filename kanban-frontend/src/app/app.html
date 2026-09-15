@@ -1,5 +1,5 @@
 <header class="app-top-bar">
-    @let username = user?.username;
+    @let username = user()?.username;
     <span>
         @if (username) {
             Logged in as: {{ username }}

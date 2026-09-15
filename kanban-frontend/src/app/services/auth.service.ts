@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Service, signal, WritableSignal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Credentials, User } from '../models/auth.model';
-import { catchError, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
 
 @Service()
@@ -20,7 +20,7 @@ export class AuthService {
 
     public readonly isAuthenticated = computed<boolean>(() => !!this.currentUser());
 
-    public readonly currentUser: WritableSignal<User | null | undefined> = this.userResource.value;
+    public readonly currentUser = this.userResource.value.asReadonly();
 
     public register(credentials: Credentials): Observable<void> {
         return this.http.post<void>(

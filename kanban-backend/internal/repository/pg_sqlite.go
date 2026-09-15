@@ -512,7 +512,7 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 	session := &domain.Session{
 		ID: sessionID,
 		UserID: userID,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(24 * time.Hour).UTC(), // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
 	}
 
 	_, err = tx.ExecContext(

@@ -91,6 +91,7 @@ func main() {
 	http.HandleFunc("POST /api/tasks", kanbanHandler.HandleTask)
 	http.HandleFunc("DELETE /api/tasks", kanbanHandler.HandleTask)
 
+	http.HandleFunc("DELETE /api/auth/logout", kanbanHandler.Logout)
 	http.HandleFunc("POST /api/auth/login", kanbanHandler.Login)
 	http.HandleFunc("POST /api/auth/register", kanbanHandler.Register)
 	http.HandleFunc("GET /api/auth/me", kanbanHandler.Authenticate)

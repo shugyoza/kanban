@@ -26,6 +26,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, userID string) (*User, error)
 	CreateSession(ctx context.Context, userID string) (*Session, error)
 	GetSessionByID(ctx context.Context, sessionID string) (*Session, error)
+	DeleteSessionByID(ctx context.Context, sessionID string) error
 }
 
 // AuthUserCase orchestrates credentials checks and login state verifications
@@ -33,4 +34,5 @@ type AuthUseCase interface {
 	Register(ctx context.Context, username string, password string) (*User, error)
 	Login(ctx context.Context, username string, password string) (string, error) // Returns a secure session ID string token
 	AuthenticateSession(ctx context.Context, sessionID string) (*User, error)
+	Logout(ctx context.Context, sessionID string) error
 }

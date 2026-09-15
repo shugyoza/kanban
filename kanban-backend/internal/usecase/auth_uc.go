@@ -92,3 +92,16 @@ func (uc *AuthInteractor) Register(ctx context.Context, username string, passwor
 
 	return user, nil
 }
+
+func (uc *AuthInteractor) Logout(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return fmt.Errorf("business rule violation: active session context is required")
+	}
+
+	err := uc.userRepo.DeleteSessionByID(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("usecase failed to delete a session: %w", err)
+	}
+
+	return nil
+}

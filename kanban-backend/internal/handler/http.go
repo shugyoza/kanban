@@ -74,7 +74,7 @@ func (handler *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		
+
 		return
 	}
 
@@ -387,6 +387,41 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true, // protects token strings from document.cookie queries
 		Secure: false, // keep as false strictly for local localhost dev environment
 		SameSite: http.SameSiteLaxMode, // guards system state from CSRF cross-origin attack vectors
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Logout handles requests matching DELETE /api/auth/logout
+func (h *KanbanHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	// 1. Extract active session cookie
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil  || cookie.Value != "" {
+		http.Error(w, "Session cookie not found", http.StatusBadRequest)
+
+		return
+	}
+
+	// 2. Remove from the sessions table, the session relevant to the sessionID / cookie value 
+	sessionID := cookie.Value
+	_ = h.authUseCase.Logout(r.Context(), sessionID)
+
+	// Clear the browser cookie jar by forcing an immediate expiration context
+	http.SetCookie(w, &http.Cookie{
+		Name: "kanban_session",
+		Value: "",
+		Path: "/",
+		Expires: time.Unix(0, 0), // Sets expiration to Jan 1, 1970, instantly destroying the cookie
+		MaxAge: -1, // Ensures immediate eviction in modern browsers
+		HttpOnly: true,
+		Secure: false, // Keep matching with local dev setup flags
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	w.WriteHeader(http.StatusNoContent)

@@ -539,3 +539,20 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 
 	return session, nil
 }
+
+func (r *SQLBoardRepository) DeleteSessionByID (ctx context.Context, sessionID string) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		"DELETE id FROM sessions WHERE id = ?;",
+		sessionID,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("session id to delete not found: %s", sessionID)
+		}
+
+		return fmt.Errorf("failed to delete session id: %w", err)
+	}
+
+	return nil
+}

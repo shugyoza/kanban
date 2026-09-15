@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Credentials } from '../../models/auth.model';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { form, FormField, minLength, required } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   imports: [FormField],
@@ -13,8 +14,8 @@ import { finalize } from 'rxjs';
 })
 export class RegisterComponent {
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly token = this.activatedRoute.snapshot.queryParamMap.get('token') ?? '';
 
   private readonly credentialsModel = signal<Required<Credentials>>({
@@ -41,15 +42,10 @@ export class RegisterComponent {
 
     this.loading.set(true);
     this.authService.register(this.credentialsModel()).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => {
         this.loading.set(false)
       })
-    ).subscribe({
-      next: response => {
-        if (response && response.id && response.username) {
-          this.router.navigate(['/', 'login'])
-        }
-      }
-    });
+    ).subscribe();
   }
 }

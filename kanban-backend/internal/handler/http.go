@@ -74,6 +74,7 @@ func (handler *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		
 		return
 	}
 
@@ -81,6 +82,7 @@ func (handler *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
 	boardID := r.URL.Query().Get("id")
 	if boardID == "" {
 		http.Error(w, "Missing required board 'id' query parameter", http.StatusBadRequest)
+
 		return
 	}
 
@@ -109,6 +111,7 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method filtering
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
@@ -116,6 +119,7 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 	var payload MoveTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -127,10 +131,12 @@ func (h *KanbanHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -155,6 +161,7 @@ func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var payload CreateTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -165,10 +172,12 @@ func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server creation failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -177,6 +186,7 @@ func (h *KanbanHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(createdTask); err != nil {
 		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -185,6 +195,7 @@ func (h *KanbanHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	var payload DeleteTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -195,10 +206,12 @@ func (h *KanbanHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -209,6 +222,7 @@ func (h *KanbanHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	var payload UpdateTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -219,10 +233,12 @@ func (h *KanbanHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -233,12 +249,14 @@ func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	var payload ArchiveTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -249,10 +267,12 @@ func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -263,12 +283,14 @@ func (h *KanbanHandler) UnarchiveTask(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	var payload ArchiveTaskPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -279,10 +301,12 @@ func (h *KanbanHandler) UnarchiveTask(w http.ResponseWriter, r *http.Request) {
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server update failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -293,12 +317,14 @@ func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request)
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	boardID := r.URL.Query().Get("boardId")
 	if boardID == "" {
 		http.Error(w, "Missing required board 'boardId' query parameter", http.StatusBadRequest)
+
 		return
 	}
 
@@ -308,10 +334,12 @@ func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request)
 
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
 		http.Error(w, "Internal server retrieval failure", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -320,6 +348,7 @@ func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request)
 
 	if err := json.NewEncoder(w).Encode(archivedTasks); err != nil {
 		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -328,12 +357,14 @@ func (h *KanbanHandler) GetArchivedTasks(w http.ResponseWriter, r *http.Request)
 func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -365,12 +396,15 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
 	}
 	defer r.Body.Close()
 
@@ -394,6 +428,7 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
@@ -401,6 +436,7 @@ func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("kanban_session")
 	if err != nil {
 		http.Error(w, "Unauthorized: No active session cookie found", http.StatusUnauthorized)
+
 		return
 	}
 
@@ -408,6 +444,7 @@ func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Session validation failed: %v", err)
 		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+
 		return
 	}
 

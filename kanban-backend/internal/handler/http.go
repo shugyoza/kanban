@@ -402,7 +402,7 @@ func (h *KanbanHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Extract active session cookie
 	cookie, err := r.Cookie("kanban_session")
-	if err != nil  || cookie.Value != "" {
+	if err != nil  || cookie.Value == "" {
 		http.Error(w, "Session cookie not found", http.StatusBadRequest)
 
 		return

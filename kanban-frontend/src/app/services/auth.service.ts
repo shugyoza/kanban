@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Service, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Credentials, User } from '../models/auth.model';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
 
 @Service()
@@ -15,12 +15,11 @@ export class AuthService {
         params: () => ({
             version: this.authVersion()
         }),
-        stream: () => this.getCurrentUser(),
+        stream: ({ params }) => this.getCurrentUser(params.version),
     });
 
-    public readonly isAuthenticated = computed<boolean>(() => !!this.currentUser());
-
     public readonly currentUser = this.userResource.value.asReadonly();
+    public readonly authStatus = this.userResource.status;
 
     public register(credentials: Credentials): Observable<void> {
         return this.http.post<void>(
@@ -55,7 +54,11 @@ export class AuthService {
         )
     }
 
-    public getCurrentUser(): Observable<User | null> {
+    public getCurrentUser(authVersion: number): Observable<User | null> {
+        if (!authVersion) {
+            return of(null)
+        }
+
         return this.http.get<User | null>(
             '/api/auth/me'
         )

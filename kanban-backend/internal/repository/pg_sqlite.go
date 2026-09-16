@@ -480,7 +480,7 @@ func (r *SQLBoardRepository) GetSessionByID(ctx context.Context, sessionID strin
 	).Scan(&s.ID, &s.UserID, &s.ExpiresAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("session id not found: %s", sessionID)
+			return nil, fmt.Errorf("session id: %s, not found: %w", sessionID, err)
 		}
 
 		return nil, fmt.Errorf("failed to extract session id block: %w", err)

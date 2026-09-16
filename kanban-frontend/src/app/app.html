@@ -1,11 +1,20 @@
-<header class="app-top-bar">
-    @let username = user()?.username;
-    <span>
+<section class="app-top-bar">
+    <header>
+        @let username = user()?.username;
         @if (username) {
-            Logged in as: {{ username }}
+        Logged in as: {{ username }}
         }
-    </span>
-</header>
+    </header>
+    <nav>
+        @if (!!user()) {
+        <button (click)="logout()">
+            <span class="material-symbols-outlined" title="logout">
+                logout
+            </span>
+        </button>
+        }
+    </nav>
+</section>
 <main #mainContent>
     <router-outlet></router-outlet>
 </main>

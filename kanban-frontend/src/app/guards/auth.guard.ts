@@ -8,11 +8,8 @@ export const authGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  return toObservable(authService.authStatus).pipe(
-    filter(status => status !== 'loading'),
-    take(1),
-    map(() => {
-      const user = authService.currentUser();
+  return authService.getCurrentUser().pipe(
+    map(user => {
       if (!user) {
         router.navigate(['/', 'login']);
       }

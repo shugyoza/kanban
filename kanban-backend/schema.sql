@@ -54,3 +54,15 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 -- Index the session ID space for sub-millisecond retrieval lookups
 CREATE INDEX IF NOT EXISTS idx_sessions_id ON sessions(id);
+
+
+-- Invitations Tracking Table (for account registration)
+CREATE TABLE IF NOT EXISTS invitations (
+  token TEXT PRIMARY KEY,
+  email TEXT NOT NULL, -- Optional: restricts registration to a specific email
+  created_by TEXT NOT NULL, -- Links to the admin user who generated it
+  expires_at DATETIME NOT NULL, -- Enforcement boundary for time expiration
+  used_at DATETIME DEFAULT NULL, -- Acts as a single-use flag (null = valid, timestamp = used)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(created_by) REFERENCES users(id)
+);

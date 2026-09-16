@@ -28,7 +28,7 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 		FROM boards b
 		LEFT JOIN columns c ON b.id = c.board_id
 		LEFT JOIN tasks t ON c.id = t.column_id AND t.is_archived = 0
-		WHERE b.id = $1
+		WHERE b.id = ?
 		ORDER BY c.position ASC, t.position ASC;
 	`
 
@@ -130,7 +130,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 	// 2. Fetch the task's current column tracking metadata before the move
 	var currentColumnID string
 	var currentPosition int
-	err = tx.QueryRowContext(ctx, "SELECT column_id, position FROM tasks WHERE id = $1", taskID).Scan(&currentColumnID, &currentPosition)
+	err = tx.QueryRowContext(ctx, "SELECT column_id, position FROM tasks WHERE id = ?", taskID).Scan(&currentColumnID, &currentPosition)
 	if err != nil {
 		return fmt.Errorf("failed to trace targeted task: %w", err)
 	}
@@ -142,14 +142,14 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 			// shifting down: push intermediate cards up
 			_, err = tx.ExecContext(
 				ctx, 
-				"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND position <= $3 AND is_archived = 0", 
+				"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND position <= ? AND is_archived = 0;", 
 				targetColumnID, currentPosition, targetPosition,
 			)
 		} else if currentPosition > targetPosition {
 			// shifting up: push intermediate cards down
 			_, err = tx.ExecContext(
 				ctx,
-				"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND position < $3 AND is_archived = 0",
+				"UPDATE tasks SET position = position + 1 WHERE column_id = ? AND position >= ? AND position < ? AND is_archived = 0;",
 				targetColumnID, targetPosition, currentPosition,
 			)
 		}
@@ -157,7 +157,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 		// Moving across columns: clear the gap in the old column lane
 		_, err = tx.ExecContext(
 			ctx,
-			"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0",
+			"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND is_archived = 0;",
 			currentColumnID, currentPosition,
 		)
 		if err != nil {
@@ -167,7 +167,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 		// open up a placeholder index slot in the new target column lane
 		_, err = tx.ExecContext(
 			ctx,
-			"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND is_archived = 0",
+			"UPDATE tasks SET position = position + 1 WHERE column_id = ? AND position >= ? AND is_archived = 0;",
 			targetColumnID, targetPosition,
 		)
 	}
@@ -179,7 +179,7 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 	// 4. Update target card to point to its new column and destination position index
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET column_id = $1, position = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+		"UPDATE tasks SET column_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
 		targetColumnID, targetPosition, taskID,
 	)
 	if err != nil {
@@ -205,7 +205,7 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 	// to make room for a brand new task at position 0
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND is_archived = 0",
+		"UPDATE tasks SET position = position + 1 WHERE column_id = ? AND is_archived = 0;",
 		columnID,
 	)
 	if err != nil {
@@ -219,7 +219,7 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 	// 3. EXECUTE THE WRITE: Save the clean parameters permanently to the table rows
 	query := `
 	INSERT INTO tasks (id, column_id, title, description, position, is_archived, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	VALUES (?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 	`
 	_, err = tx.ExecContext(ctx, query, newID, columnID, title, description, defaultPosition)
 	if err != nil {
@@ -254,7 +254,7 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 	// 2. Query to delete the row
 	_, err = tx.ExecContext(
 		ctx,
-		"DELETE FROM tasks WHERE column_id = $1 AND id = $2",
+		"DELETE FROM tasks WHERE column_id = ? AND id = ?;",
 		columnID,
 		deletedTaskID,
 	)
@@ -265,7 +265,7 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 	// Re-index all the rows within the column
 	_, err = tx.ExecContext(
 		ctx, 
-		"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0", 
+		"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND is_archived = 0;", 
 		columnID, deletedTaskPosition)
 	if err != nil {
 		return fmt.Errorf("failed to close position gap following deletion: %w", err)
@@ -281,7 +281,7 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 }
 
 func (r *SQLBoardRepository) UpdateTaskDetails(ctx context.Context, taskID string, title string, description string) error {
-	query := `UPDATE tasks SET title = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+	query := `UPDATE tasks SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;`
 
 	result, err := r.db.ExecContext(ctx, query, title, description, taskID)
 	if err != nil {
@@ -312,7 +312,7 @@ func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,ta
 	// 2. Mark the task as archived in the database
 	_, err = tx.ExecContext(
 		ctx, 
-		"UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1", 
+		"UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", 
 		taskID)
 	if err != nil {
 		return fmt.Errorf("failed to archive task: %w", err)
@@ -321,7 +321,7 @@ func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,ta
 	// 3. Re-index all the rows within the column to close any gaps left by the archived task
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET position = position - 1 WHERE column_id = $1 AND position > $2 AND is_archived = 0",
+		"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND is_archived = 0;",
 		columnID, taskPosition,
 	)
 	if err != nil {
@@ -347,7 +347,7 @@ func (r *SQLBoardRepository) UnarchiveTask(ctx context.Context, columnID string,
 	// 2. Re-index all the rows within the column to make room for the un-archived task
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET position = position + 1 WHERE column_id = $1 AND position >= $2 AND is_archived = 0",
+		"UPDATE tasks SET position = position + 1 WHERE column_id = ? AND position >= ? AND is_archived = 0;",
 		columnID, taskPosition,
 	)
 	if err != nil {
@@ -357,7 +357,7 @@ func (r *SQLBoardRepository) UnarchiveTask(ctx context.Context, columnID string,
 	// 3. Mark the task as un-archived in the database
 	_, err = tx.ExecContext(
 		ctx,
-		"UPDATE tasks SET is_archived = 0, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+		"UPDATE tasks SET is_archived = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
 		taskID,
 	)
 	if err != nil {
@@ -382,8 +382,8 @@ func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID strin
 		FROM boards b
 		LEFT JOIN columns c ON b.id = c.board_id
 		LEFT JOIN tasks t on c.id = t.column_id AND t.is_archived = 1
-		WHERE b.id = $1
-		ORDER BY t.updated_at DESC, t.position ASC
+		WHERE b.id = ?
+		ORDER BY t.updated_at DESC, t.position ASC;
 		`,
 		boardID,
 	)
@@ -416,7 +416,7 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 
 	_, err := r.db.ExecContext(
 		ctx,
-		`INSERT INTO users (id, username, password_hash, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP);`,
+		`INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP);`,
 		newID, username, passwordHash,
 	)
 	if err != nil {
@@ -436,7 +436,7 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, username, password_hash, created_at FROM users WHERE username = $1",
+		"SELECT id, username, password_hash, created_at FROM users WHERE username = ?;",
 		username,
 	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
 	if err != nil {
@@ -456,7 +456,7 @@ func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*d
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, username, password_hash, created_at FROM users WHERE id = $1",
+		"SELECT id, username, password_hash, created_at FROM users WHERE id = ?;",
 		userID,
 	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
 	if err != nil {
@@ -475,7 +475,7 @@ func (r *SQLBoardRepository) GetSessionByID(ctx context.Context, sessionID strin
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, user_id, expires_at FROM sessions WHERE id = ?",
+		"SELECT id, user_id, expires_at FROM sessions WHERE id = ?;",
 		sessionID,
 	).Scan(&s.ID, &s.UserID, &s.ExpiresAt)
 	if err != nil {

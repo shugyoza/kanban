@@ -106,3 +106,51 @@ func (uc *AuthInteractor) Logout(ctx context.Context, sessionID string) error {
 
 	return nil
 }
+
+func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID string, email string) (string, error) {
+	if userID == "" {
+
+		return "", fmt.Errorf("business rule violation: user id context is required")
+	}
+
+	if email == "" {
+
+		return "", fmt.Errorf("business rule violation: email context is required")
+	}
+
+	expirationTime := 7 * 24 * time.Hour
+	invitationToken, err := uc.userRepo.CreateAccountRegistrationInvitation(ctx, userID, email, expirationTime)
+	if err != nil {
+
+		return "", fmt.Errorf("usecase failed to persist a new invitation: %w", err)
+	}
+
+	return invitationToken, nil
+}
+
+func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token string) (*domain.Invitation, error) {
+	if token == "" {
+
+		return nil, fmt.Errorf("business rule violation: invitation token context is required")
+	}
+
+	invitation, err := uc.userRepo.GetAccountRegistrationInvitationByToken(ctx, token)
+	if err != nil {
+		
+		return nil, fmt.Errorf("usecase failed to extract invitation for the token: %s: %w", token, err)
+	}
+
+	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+	if invitation.ExpiresAt.Before(now) {
+
+		return nil, fmt.Errorf("business rule violation: invitation token expired")
+	}
+
+	// enforce single usage for a token rule.
+	if !invitation.UsedAt.IsZero() {
+
+		return nil, fmt.Errorf("business rule violation: invitation token has been used")
+	}
+
+	return invitation, nil
+}

@@ -19,6 +19,14 @@ type Session struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
+type Invitation struct {
+	Token string `json:"token"`
+	CreatedBy string `json:"createdBy"`
+	Email string `json:"email"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	UsedAt time.Time `json:"usedAt"`
+}
+
 // UserRepository defines the database contract required to resolve user identities
 type UserRepository interface {
 	CreateUser(ctx context.Context, username string, passwordHash string) (*User, error)
@@ -27,6 +35,8 @@ type UserRepository interface {
 	CreateSession(ctx context.Context, userID string) (*Session, error)
 	GetSessionByID(ctx context.Context, sessionID string) (*Session, error)
 	DeleteSessionByID(ctx context.Context, sessionID string) error
+	CreateAccountRegistrationInvitation(ctx context.Context, userID string, email string, expirationTime time.Duration) (string, error)
+	GetAccountRegistrationInvitationByToken(ctx context.Context, token string) (*Invitation, error)
 }
 
 // AuthUserCase orchestrates credentials checks and login state verifications
@@ -35,4 +45,6 @@ type AuthUseCase interface {
 	Login(ctx context.Context, username string, password string) (string, error) // Returns a secure session ID string token
 	AuthenticateSession(ctx context.Context, sessionID string) (*User, error)
 	Logout(ctx context.Context, sessionID string) error
+	CreateInvitationToken(ctx context.Context, userID string, email string) (string, error)
+	ValidateInvitationToken(ctx context.Context, token string) (*Invitation, error)
 }

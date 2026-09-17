@@ -9,6 +9,21 @@ import (
 	"time"
 )
 
+type InvitationRequest struct {
+	UserID string `json:"userId"`
+	Email string `json:"email"`
+}
+
+type InvitationResponse struct {
+	Token string `json:"token"`
+}
+
+type InvitationTokenValidationRequest = InvitationResponse
+
+type InvitationValidationResponse struct {
+	Valid bool `json:"valid"`
+}
+
 // LoginRequest captures credentials incoming from the client form elements
 type LoginRequest struct {
 	Username string `json:"username"`
@@ -489,5 +504,79 @@ func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		ID: user.ID,
 		Username: user.Username,
 		CreatedAt: user.CreatedAt,
+	})
+}
+
+func (h *KanbanHandler) ValidateInvitationToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var req InvitationTokenValidationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	_, err := h.authUseCase.ValidateInvitationToken(r.Context(), req.Token)
+	if err != nil {
+		log.Printf("Invitation token validation for token: %s, failed: %v", req.Token, err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		http.Error(w, "Unable to complete invitation token validation.", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(InvitationValidationResponse{
+		Valid: true,
+	})
+}
+
+func (h *KanbanHandler) CreateInvitationToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var req InvitationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	invitationToken, err := h.authUseCase.CreateInvitationToken(r.Context(), req.UserID, req.Email)
+	if err != nil {
+		log.Printf("Invitation generating by userId: %s, failed for email: %s: %v", req.UserID, req.Email, err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		http.Error(w, "Unable to complete invitation process.", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(InvitationResponse{
+		Token: invitationToken,
 	})
 }

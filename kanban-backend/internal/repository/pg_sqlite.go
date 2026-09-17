@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -496,12 +497,12 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 	}
 	defer tx.Rollback()
 
-	now := time.Now().UTC()
+	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
 	sessionID := fmt.Sprintf("sess-%d-%s", now.UnixNano(), userID)
 	session := &domain.Session{
 		ID: sessionID,
 		UserID: userID,
-		ExpiresAt: now.Add(24 * time.Hour), // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+		ExpiresAt: now.Add(24 * time.Hour),
 	}
 
 	// Enforce the timezone format to sync with sqlite implementation
@@ -555,4 +556,67 @@ func (r *SQLBoardRepository) DeleteSessionByID (ctx context.Context, sessionID s
 	}
 
 	return nil
+}
+
+// Extract an invitation record from the database based on the given invitation token
+func (r *SQLBoardRepository) GetAccountRegistrationInvitationByToken(ctx context.Context, token string) (*domain.Invitation, error) {
+	var i domain.Invitation
+	var usedAtPointer *time.Time
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT token, expires_at, used_at FROM invitations WHERE token = ?;",
+		token,
+	).Scan(&i.Token, &i.ExpiresAt, &usedAtPointer)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+
+			return nil, fmt.Errorf("invitation token: %s, not found: %w", token, err)
+		}
+
+		return nil, fmt.Errorf("failed to extract invitation token block: %w", err)
+	}
+
+	if usedAtPointer != nil {
+		i.UsedAt = *usedAtPointer // if nil, i.UsedAt remains time.time{} (the zero value). In this case, in usecase layer, the validation should implement, e.g: if !invitation.UsedAt.IsZero() { ... }
+		// alternatively: i.UsedAt = usedAtPointer. This is a direct assignment of the pointer. In this case, in usecase layer, the validation should implement, e.g: if invitation.UsedAt != nil { ... }
+	} 
+
+	return &i, nil
+}
+
+// Create an invitation to register for a new account with a generated invitation token
+func (r *SQLBoardRepository) CreateAccountRegistrationInvitation(ctx context.Context, userID string, email string, expirationTime time.Duration) (string, error) {
+	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+
+	// generate randomized string to completely avoid potential id collision due to rapid spamming button that triggered sequential rapid API call
+	randomBytes := make([]byte, 4)
+	if _, err := rand.Read(randomBytes); err != nil {
+
+		return "", fmt.Errorf("failed to generate random string for invitation token entropy: %w", err)
+	}
+
+	// generate token id
+	tokenID := fmt.Sprintf("invi-%d-%x-%s", now.UnixNano(), randomBytes, userID)
+
+	// create invitation struct
+	invitation := &domain.Invitation{
+		Token: tokenID,
+		CreatedBy: userID,
+		ExpiresAt: now.Add(expirationTime),
+		Email: email,
+	}
+
+	// persist invitation record to database
+	_, err := r.db.ExecContext(
+		ctx,
+		`INSERT INTO invitations (token, email, created_by, expires_at, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);`,
+		tokenID, email, userID, invitation.ExpiresAt,
+	)
+	if err != nil {
+
+		return "", fmt.Errorf("failed to persist a new invitation: %w", err)
+	}
+
+	return tokenID, nil
 }

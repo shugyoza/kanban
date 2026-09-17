@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"kanban-backend/internal/domain"
 	"log"
 	"net/http"
@@ -527,6 +528,13 @@ func (h *KanbanHandler) ValidateInvitationToken(w http.ResponseWriter, r *http.R
 		log.Printf("Invitation token validation for token: %s, failed: %v", req.Token, err)
 
 		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		notFoundErrMessage := fmt.Sprintf("invitation token: %s, not found:", req.Token)
+		if strings.Contains(err.Error(), notFoundErrMessage) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 
 			return

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS
   boards (
     id VARCHAR(36) PRIMARY KEY, -- UUID for board identification
     title VARCHAR(100) NOT NULL,
+    user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -38,9 +39,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
--- 2.  Establish multi-tenant linkage: tracks which user owns which board layout
-ALTER TABLE boards ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
 
 
 -- Sessions Tracking Table (For stateful session validation)

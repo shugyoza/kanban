@@ -1,8 +1,12 @@
-export interface InvitationTokenRequest {
+export interface CreateInvitationTokenRequest {
     userId: string;
     email: string;
 }
 
-export interface InvitationTokenResponse {
+export interface CreateInvitationTokenResponse {
     token: string;
+}
+
+export interface ValidateInvitationTokenResponse {
+    valid: boolean;
 }

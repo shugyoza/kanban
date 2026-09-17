@@ -1,0 +1,26 @@
+.invite-form-wrapper {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.invitation-form {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+section.generated-url {
+    border: 1px solid grey;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+
+}
+
+button#copyBtn {
+    margin: 0.5rem;
+}

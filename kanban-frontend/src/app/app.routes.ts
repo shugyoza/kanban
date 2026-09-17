@@ -4,6 +4,11 @@ import { inviteGuard } from './guards/invite.guard';
 
 export const routes: Routes = [
     {
+        path: 'invite',
+        // canActivate: [authGuard],
+        loadComponent: () => import('./components/invite.component/invite.component').then(m => m.InviteComponent)
+    },
+    {
         path: 'login',
         loadComponent: () => import('./components/login.component/login.component').then(m => m.LoginComponent)
     },

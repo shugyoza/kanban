@@ -1,0 +1,32 @@
+<section class="invite-form-wrapper">
+    <h1>
+        Generate Registration Invitation URL
+    </h1>
+
+    <form class="invitation-form" (submit)="submitInvitationTokenRequest($event)">
+
+        <label for="email">
+            Invitee Email Address
+        </label>
+        <input type="email" id="email" placeholder="name@example.com" autocomplete="email" [formField]="emailForm" />
+
+        <button type="submit" class="invite-action-trigger" [disabled]="emailForm().invalid()">
+            {{ loading() ? 'Generating Invitation Token...' : 'Create Invitation Link' }}
+        </button>
+    </form>
+
+
+    @let url = invitationURL();
+    @if (url) {
+    <section class="generated-url">
+        <span>
+            {{ url }}
+        </span>
+        <button id="copyBtn" (click)="copyInvitationURL()" title="Copy Invitation URL" [disabled]="!url">
+            <span class="material-symbols-outlined">
+                content_copy
+            </span>
+        </button>
+    </section>
+    }
+</section>

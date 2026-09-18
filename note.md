@@ -1,5 +1,24 @@
 # Note
 
+##  20260918
+Implemented new structure, e.g:
+kanban-backend/
+├── go.mod
+├── cmd/
+│   └── api/
+│       └── main.go
+├── pkg/ (or internal/)
+│   ├── middleware/      
+│   │   └── cors.go       <-- New home for your network filters
+│   └── util/
+│       └── email.go      <-- Keeps only pure helper string functions
+
+We want to group packages by their behavior and dependency signatures:
+* middleware has its own package (HTTP/Web layer) as middleware functions specifically accept and return Web/HTTP structural components (http.Handler). They deal entirely with routing, headers, cookies, and HTTP request life-cycles. They are heavily bound to the network layer.
+* util package should be reserved for pure, isolated, helper functions that have no awareness of HTTP requests, responses, or web network.
+
+
+
 ## 20260820
 Unit testing passed.
 ```txt

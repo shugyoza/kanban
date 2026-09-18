@@ -6,7 +6,3 @@ export interface CreateInvitationTokenRequest {
 export interface CreateInvitationTokenResponse {
     token: string;
 }
-
-export interface ValidateInvitationTokenResponse {
-    valid: boolean;
-}

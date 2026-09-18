@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { InvitationService } from '../services/invitation.service';
 import { catchError, map, of } from 'rxjs';
+import { HttpStatusCode } from '@angular/common/http';
 
 export const inviteGuard: CanActivateFn = (route) => {
   const router = inject(Router);
@@ -12,13 +13,12 @@ export const inviteGuard: CanActivateFn = (route) => {
   if (token && token.trim().length > 0) {
     return inviteService.validateInvitationToken(token).pipe(
       map(response => {
-        const isValidToken = response.valid;
-
-        if (!isValidToken) {
+        const isValid = response.status === HttpStatusCode.Ok;
+        if (!isValid) {
           router.navigate(['/', 'login']);
         }
 
-        return isValidToken;
+        return isValid;
       }),
       catchError(error => {
         console.error(error);

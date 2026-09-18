@@ -13,15 +13,21 @@ import (
 	"kanban-backend/internal/handler"
 	"kanban-backend/internal/repository"
 	"kanban-backend/internal/usecase"
+	"kanban-backend/pkg/middleware"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "modernc.org/sqlite" // SQLite driver
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, defaulting to system environment variables")
+	}
+
 	// 1. Initialize the pool structure (validates syntax only)
 
 	// SQLite Local File Connection
@@ -99,10 +105,17 @@ func main() {
 	http.HandleFunc("GET /api/auth/me", kanbanHandler.Authenticate)
 
 	serverPort := ":8080"
+	if (os.Getenv("PORT") != "") {
+		serverPort = os.Getenv("PORT")
+	}
+
+	// Clean, readable middleware wrapping chain
+	wrappedServerMux := middleware.CORS(http.DefaultServeMux)
+
 	// Fire up the native Go local web server
 	log.Printf("Kanban backend server is listening at http://localhost%s\n", serverPort)
 
-	if err := http.ListenAndServe(serverPort, nil); err != nil {
+	if err := http.ListenAndServe(serverPort, wrappedServerMux); err != nil {
 		log.Fatalf("Critical: Web server failed to start %v", err)
 	}
 

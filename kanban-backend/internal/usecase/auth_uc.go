@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"kanban-backend/internal/domain"
+	"kanban-backend/pkg/util"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -153,4 +154,14 @@ func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token str
 	}
 
 	return invitation, nil
+}
+
+func (uc *AuthInteractor) ValidateEmail(ctx context.Context, email string) (string, string, error) {
+	address, domain, err := util.ValidateEmailInput(email)
+	if err != nil {
+		return "", "", fmt.Errorf("usecase failed to validate email: %w", err)
+	}
+
+	return address, domain, nil
+
 }

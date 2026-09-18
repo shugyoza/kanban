@@ -47,4 +47,5 @@ type AuthUseCase interface {
 	Logout(ctx context.Context, sessionID string) error
 	CreateInvitationToken(ctx context.Context, userID string, email string) (string, error)
 	ValidateInvitationToken(ctx context.Context, token string) (*Invitation, error)
+	ValidateEmail(ctx context.Context, email string) (string, string, error)
 }

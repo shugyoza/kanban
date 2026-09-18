@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+type EmailInputValidationRequest struct {
+	Email string `json:"email"`
+}
+
 type InvitationRequest struct {
 	UserID string `json:"userId"`
 	Email string `json:"email"`
@@ -20,10 +24,6 @@ type InvitationResponse struct {
 }
 
 type InvitationTokenValidationRequest = InvitationResponse
-
-type InvitationValidationResponse struct {
-	Valid bool `json:"valid"`
-}
 
 // LoginRequest captures credentials incoming from the client form elements
 type LoginRequest struct {
@@ -547,9 +547,6 @@ func (h *KanbanHandler) ValidateInvitationToken(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(InvitationValidationResponse{
-		Valid: true,
-	})
 }
 
 func (h *KanbanHandler) CreateInvitationToken(w http.ResponseWriter, r *http.Request) {
@@ -587,4 +584,30 @@ func (h *KanbanHandler) CreateInvitationToken(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(InvitationResponse{
 		Token: invitationToken,
 	})
+}
+
+func (h *KanbanHandler) ValidateEmailInput(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var req EmailInputValidationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	_, _, err := h.authUseCase.ValidateEmail(r.Context(), req.Email)
+	if err != nil {
+		http.Error(w, "Invalid email input", http.StatusBadRequest)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }

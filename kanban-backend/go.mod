@@ -3,6 +3,7 @@ module kanban-backend
 go 1.27.0
 
 require (
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.57.0
 	modernc.org/sqlite v1.57.0
 )

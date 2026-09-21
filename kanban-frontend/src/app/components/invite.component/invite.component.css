@@ -2,13 +2,16 @@
     display: flex;
     justify-content: center;
     flex-direction: column;
+    align-items: center;
     width: 100%;
     gap: 0.5rem;
 }
 
 .invitation-form {
+    width: 30rem;
     display: flex;
     justify-content: center;
+    flex-direction: column;
     gap: 0.5rem;
 }
 

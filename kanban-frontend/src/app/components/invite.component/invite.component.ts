@@ -1,8 +1,9 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { InvitationService } from '../../services/invitation.service';
-import { form, FormField, required } from '@angular/forms/signals';
+import { debounce, email, form, FormField, required, validateHttp } from '@angular/forms/signals';
 import { AuthService } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse, HttpResponse, HttpStatusCode } from '@angular/common/http';
 
 @Component({
   imports: [FormField],
@@ -16,10 +17,47 @@ export class InviteComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly user = this.authService.currentUser()
-  private readonly emailModel = signal<Required<string>>('');
+  private validatedEmails = new Set<string>();
+  private readonly inviteModel = signal<Required<{ email: string }>>({
+    email: '',
+  });
 
-  protected readonly emailForm = form(this.emailModel, schemaPath => {
-    required(schemaPath, { message: 'Email is required' })
+  protected readonly inviteForm = form(this.inviteModel, schemaPath => {
+    required(schemaPath.email, { message: 'Email is required' });
+    email(schemaPath.email, { message: 'Invalid email'});
+
+    debounce(schemaPath.email, 300)
+    validateHttp(schemaPath.email, {
+      request: ({ value }) => ({
+        url: '/api/email/validate',
+        method: 'POST',
+        body: { email: value() },
+      }),
+      onSuccess: (response: HttpResponse<void>, { value }) => {
+        if (response.ok) {
+          // Cache successful validations
+          this.validatedEmails.add(value());
+        }
+
+        return null;
+      },
+      onError: (err: unknown) => {
+        const error = err as HttpErrorResponse;
+
+        if (error.status === HttpStatusCode.BadRequest && error.error === 'Invalid email input') {
+
+          return {
+            kind: 'invalid',
+            message: error.error
+          }
+        }
+        
+        return {
+          kind: 'requestFailed',
+          message: 'Unable to validate email input'
+        }
+      }
+    })
   })
   protected readonly loading = signal<boolean>(false);
   protected readonly invitationURL = signal<string>('');
@@ -34,7 +72,7 @@ export class InviteComponent {
       return;
     }
 
-    if (this.emailForm().invalid()) {
+    if (this.inviteForm.email().invalid()) {
       console.error('invalid email form');
 
       return;
@@ -42,7 +80,7 @@ export class InviteComponent {
 
     this.inviteService.getInvitationToken({
       userId,
-      email: this.emailModel()
+      email: this.inviteModel().email
     }).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({

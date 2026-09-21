@@ -8,9 +8,12 @@
         <label for="email">
             Invitee Email Address
         </label>
-        <input type="email" id="email" placeholder="name@example.com" autocomplete="email" [formField]="emailForm" />
-
-        <button type="submit" class="invite-action-trigger" [disabled]="emailForm().invalid()">
+        <input type="email" id="email" placeholder="name@example.com" autocomplete="email" [formField]="inviteForm.email" />
+        @let emailError = inviteForm.email().errors()?.[0];
+        <span>
+            {{ emailError?.message }}
+        </span>
+        <button type="submit" class="invite-action-trigger" [disabled]="inviteForm.email().invalid()">
             {{ loading() ? 'Generating Invitation Token...' : 'Create Invitation Link' }}
         </button>
     </form>

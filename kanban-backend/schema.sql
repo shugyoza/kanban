@@ -37,8 +37,24 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  email TEXT UNIQUE,
+  phone TEXT UNIQUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Password reset requests are short-lived, single-use credentials. Store only
+-- a hash of the token so a database read cannot be used to reset an account.
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id
+  ON password_reset_tokens(user_id);
 
 
 -- Sessions Tracking Table (For stateful session validation)

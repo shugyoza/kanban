@@ -40,7 +40,7 @@ func (uc *AuthInteractor) Login(ctx context.Context, username string, password s
 	// 3. Generate session token: For modern token-less architecture layout baseline, we will output a high entropy tracking string to identify this session
 	session, err := uc.userRepo.CreateSession(ctx, user.ID)
 	if err != nil {
-		return "", fmt.Errorf("usecase failed to persist a new session: %w", err)
+		return "", fmt.Errorf("Login usecase failed to persist a new session: %w", err)
 	}
 	return session.ID, nil
 }
@@ -71,9 +71,14 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 	return user, nil
 }
 
-func (uc *AuthInteractor) Register(ctx context.Context, username string, password string) (*domain.User, error) {
+func (uc *AuthInteractor) Register(ctx context.Context, username string, password string, email string) (*domain.User, error) {
 	if username == "" || password == "" {
 		return nil, fmt.Errorf("business rule violation: credentials cannot be left blank")
+	}
+
+	_, _, err := uc.ValidateEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("Register usecase failed to validate email: %w", err)
 	}
 
 	if len(password) < 8 {
@@ -87,9 +92,9 @@ func (uc *AuthInteractor) Register(ctx context.Context, username string, passwor
 	}
 
 	// pass the hashed byte representation of the password to the repo method to create a user
-	user, err := uc.userRepo.CreateUser(ctx, username, string(bytes))
+	user, err := uc.userRepo.CreateUser(ctx, username, string(bytes), email)
 	if err != nil {
-		return nil, fmt.Errorf("usecase failed to persist a new account: %w", err)
+		return nil, fmt.Errorf("Register usecase failed to persist a new account: %w", err)
 	}
 
 	return user, nil
@@ -102,7 +107,7 @@ func (uc *AuthInteractor) Logout(ctx context.Context, sessionID string) error {
 
 	err := uc.userRepo.DeleteSessionByID(ctx, sessionID)
 	if err != nil {
-		return fmt.Errorf("usecase failed to delete a session: %w", err)
+		return fmt.Errorf("Logout usecase failed to delete a session: %w", err)
 	}
 
 	return nil
@@ -123,7 +128,7 @@ func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID stri
 	invitationToken, err := uc.userRepo.CreateAccountRegistrationInvitation(ctx, userID, email, expirationTime)
 	if err != nil {
 
-		return "", fmt.Errorf("usecase failed to persist a new invitation: %w", err)
+		return "", fmt.Errorf("CreateInvitationToken usecase failed to persist a new invitation: %w", err)
 	}
 
 	return invitationToken, nil
@@ -138,7 +143,7 @@ func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token str
 	invitation, err := uc.userRepo.GetAccountRegistrationInvitationByToken(ctx, token)
 	if err != nil {
 		
-		return nil, fmt.Errorf("usecase failed to extract invitation for the token: %s: %w", token, err)
+		return nil, fmt.Errorf("ValidateInvitationToken usecase failed to extract invitation for the token: %s: %w", token, err)
 	}
 
 	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
@@ -159,7 +164,7 @@ func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token str
 func (uc *AuthInteractor) ValidateEmail(ctx context.Context, email string) (string, string, error) {
 	address, domain, err := util.ValidateEmailInput(email)
 	if err != nil {
-		return "", "", fmt.Errorf("usecase failed to validate email: %w", err)
+		return "", "", fmt.Errorf("ValidateEmail usecase failed to validate email: %w", err)
 	}
 
 	return address, domain, nil

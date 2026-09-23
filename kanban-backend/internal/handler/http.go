@@ -31,8 +31,11 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// RegisterRequest alias LoginRequest as they both use identical struct
-type RegisterRequest = LoginRequest
+// RegisterRequest reuses login credentials and adds the required account email.
+type RegisterRequest struct {
+	LoginRequest
+	Email string `json:"email"`
+}
 
 // UserResponse filters out sensitive fields when sending account profile to the client
 type UserResponse struct {
@@ -459,7 +462,7 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	_, err := h.authUseCase.Register(r.Context(), req.Username, req.Password)
+	_, err := h.authUseCase.Register(r.Context(), req.Username, req.Password, req.Email)
 	if err != nil {
 		log.Printf("Registration failed for username %s: %v", req.Username, err)
 

@@ -411,14 +411,14 @@ func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID strin
 }
 
 // CreateUser saves a brand new user profile ro cleanly into the database tabla layer
-func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, passwordHash string) (*domain.User, error) {
+func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, passwordHash string, email string) (*domain.User, error) {
 	// Generating a high-entropy string ID for fresh record account placeholder
 	newID := fmt.Sprintf("user-%d", time.Now().UnixNano())
 
 	_, err := r.db.ExecContext(
 		ctx,
-		`INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP);`,
-		newID, username, passwordHash,
+		`INSERT INTO users (id, username, password_hash, email, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);`,
+		newID, username, email, passwordHash,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist new user profile: %w", err)
@@ -427,6 +427,7 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 	return &domain.User{
 		ID: newID,
 		Username: username,
+		Email: email,
 		CreatedAt: time.Now(),
 	}, nil
 }
@@ -434,13 +435,13 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 // GetUserByUsername locates an account row using a unique username string pattern modifier
 func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User
-	var email, phone sql.NullString
+	var phone sql.NullString
 
 	err := r.db.QueryRowContext(
 		ctx,
 		"SELECT id, username, password_hash, email, phone, created_at FROM users WHERE username = ?;",
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &phone, &u.CreatedAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Email, &phone, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user not found: %s", username)
@@ -448,9 +449,7 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 
 		return nil, fmt.Errorf("failed to query user row: %w", err)
 	}
-	if email.Valid {
-		u.Email = &email.String
-	}
+
 	if phone.Valid {
 		u.Phone = &phone.String
 	}
@@ -461,13 +460,13 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 // GetUserByID extract account details safely using a clean system primary key identification reference
 func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*domain.User, error) {
 	var u domain.User
-	var email, phone sql.NullString
+	var phone sql.NullString
 
 	err := r.db.QueryRowContext(
 		ctx,
 		"SELECT id, username, password_hash, email, phone, created_at FROM users WHERE id = ?;",
 		userID,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &phone, &u.CreatedAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Email, &phone, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user id not found: %s", userID)
@@ -475,9 +474,7 @@ func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*d
 
 		return nil, fmt.Errorf("failed to extract user ID block: %w", err)
 	}
-	if email.Valid {
-		u.Email = &email.String
-	}
+
 	if phone.Valid {
 		u.Phone = &phone.String
 	}

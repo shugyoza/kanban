@@ -10,6 +10,8 @@ type User struct {
 	ID string `json:"id"`
 	Username string `json:"username"`
 	PasswordHash string `json:"-"` // Never expose the raw password hash strings over json payload wires
+	Email *string `json:"email,omitempty"`
+	Phone *string `json:"phone,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

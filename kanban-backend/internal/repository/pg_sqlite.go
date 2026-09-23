@@ -434,18 +434,25 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 // GetUserByUsername locates an account row using a unique username string pattern modifier
 func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User
+	var email, phone sql.NullString
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, username, password_hash, created_at FROM users WHERE username = ?;",
+		"SELECT id, username, password_hash, email, phone, created_at FROM users WHERE username = ?;",
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &phone, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user not found: %s", username)
 		}
 
 		return nil, fmt.Errorf("failed to query user row: %w", err)
+	}
+	if email.Valid {
+		u.Email = &email.String
+	}
+	if phone.Valid {
+		u.Phone = &phone.String
 	}
 
 	return &u, nil
@@ -454,18 +461,25 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 // GetUserByID extract account details safely using a clean system primary key identification reference
 func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*domain.User, error) {
 	var u domain.User
+	var email, phone sql.NullString
 
 	err := r.db.QueryRowContext(
 		ctx,
-		"SELECT id, username, password_hash, created_at FROM users WHERE id = ?;",
+		"SELECT id, username, password_hash, email, phone, created_at FROM users WHERE id = ?;",
 		userID,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &phone, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user id not found: %s", userID)
 		}
 
 		return nil, fmt.Errorf("failed to extract user ID block: %w", err)
+	}
+	if email.Valid {
+		u.Email = &email.String
+	}
+	if phone.Valid {
+		u.Phone = &phone.String
 	}
 	
 	return &u, nil

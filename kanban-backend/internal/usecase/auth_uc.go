@@ -188,3 +188,17 @@ func (uc *AuthInteractor) ValidateEmail(ctx context.Context, email string) (stri
 
 	return address, domain, nil
 }
+
+func (uc *AuthInteractor) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	if email == "" {
+
+		return nil, fmt.Errorf("business rule violation: email context is required")
+	}
+
+	u, err := uc.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("ValidateEmailRegistered usecase failed to validate whether the email has been registered: %w", err)
+	}
+
+	return u, nil;
+}

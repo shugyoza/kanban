@@ -443,10 +443,35 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Email, &phone, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found: %s", username)
+			return nil, fmt.Errorf("user not found for username: %s", username)
 		}
 
-		return nil, fmt.Errorf("failed to query user row: %w", err)
+		return nil, fmt.Errorf("failed to query user row by username: %w", err)
+	}
+
+	if phone.Valid {
+		u.Phone = &phone.String
+	}
+
+	return &u, nil
+}
+
+// GetUserByEmail extract account details safely using the given email
+func (r *SQLBoardRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var u domain.User
+	var phone sql.NullString
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT id, username, password_hash, email, phone, created_at FROM users WHERE email = ?;",
+		email,
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Email, &phone, &u.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found for email: %s", email)
+		}
+
+		return nil, fmt.Errorf("failed to query user row by email: %w", err)
 	}
 
 	if phone.Valid {

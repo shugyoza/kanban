@@ -23,6 +23,7 @@ export class RegisterComponent {
     username: '',
     password: '',
     email: this.email,
+    token: this.token,
   })
 
   protected readonly registerForm = form(this.credentialsModel, schemaPath => {

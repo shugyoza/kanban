@@ -78,11 +78,12 @@ func (uc *AuthInteractor) AuthenticateSession(ctx context.Context, sessionID str
 	return user, nil
 }
 
-func (uc *AuthInteractor) Register(ctx context.Context, username string, password string, email string) (*domain.User, error) {
+func (uc *AuthInteractor) Register(ctx context.Context, username string, password string, email string, inviteToken string) (*domain.User, error) {
 	if username == "" || password == "" {
 		return nil, fmt.Errorf("business rule violation: credentials cannot be left blank")
 	}
 
+	// validate email input value/format
 	_, _, err := uc.ValidateEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("Register usecase failed to validate email: %w", err)
@@ -92,14 +93,26 @@ func (uc *AuthInteractor) Register(ctx context.Context, username string, passwor
 		return nil, fmt.Errorf("business rule violation: password must be at least 8 characters long")
 	}
 
+	// validate email has already been associated to a User account
+	_, err = uc.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("Register usecase failed to associate the email to a User account")
+	}
+
+	// validate invite token
+	_, err = uc.ValidateInvitationToken(ctx, inviteToken)
+	if err != nil {
+		return nil, fmt.Errorf("Register usecase failed to extract any invitation out of the given token")
+	}
+
 	// encrypt password
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("cryptographic failure: failed to securely salt user password: %w", err)
 	}
 
-	// pass the hashed byte representation of the password to the repo method to create a user
-	user, err := uc.userRepo.CreateUser(ctx, username, string(bytes), email)
+	// pass the hashed byte representation of the password and the inviteToken to the repo method to create a user
+	user, err := uc.userRepo.CreateUser(ctx, username, string(bytes), email, inviteToken)
 	if err != nil {
 		return nil, fmt.Errorf("Register usecase failed to persist a new account: %w", err)
 	}

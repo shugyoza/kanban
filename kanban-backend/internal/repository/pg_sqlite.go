@@ -410,17 +410,43 @@ func (r *SQLBoardRepository) GetArchivedTasks(ctx context.Context, boardID strin
 }
 
 // CreateUser saves a brand new user profile ro cleanly into the database tabla layer
-func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, passwordHash string, email string) (*domain.User, error) {
+func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, passwordHash string, email string, inviteToken string) (*domain.User, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initiate atomic session transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Generating a high-entropy string ID for fresh record account placeholder
 	newID := fmt.Sprintf("user-%d", time.Now().UnixNano())
 
-	_, err := r.db.ExecContext(
+	_, err = tx.ExecContext(
 		ctx,
 		`INSERT INTO users (id, username, password_hash, email, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);`,
 		newID, username, passwordHash, email,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist new user profile: %w", err)
+	}
+
+	result, err := tx.ExecContext(
+		ctx,
+		"UPDATE invitations SET used_at = CURRENT_TIMESTAMP WHERE token = ?;",
+		inviteToken,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update invitation as being used")
+	}
+
+	// Optional check if a row of invitation has actually been updated to have been used at now
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+
+		return nil, fmt.Errorf("failed to mark the invitation token: %s, as being used", inviteToken)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit session transaction: %w", err)
 	}
 
 	return &domain.User{

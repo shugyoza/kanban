@@ -40,6 +40,7 @@ type LoginRequest struct {
 type RegisterRequest struct {
 	LoginRequest
 	Email string `json:"email"`
+	Token string `json:"token"`
 }
 
 // UserResponse filters out sensitive fields when sending account profile to the client
@@ -466,7 +467,7 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	_, err := h.authUseCase.Register(r.Context(), req.Username, req.Password, req.Email)
+	_, err := h.authUseCase.Register(r.Context(), req.Username, req.Password, req.Email, req.Token)
 	if err != nil {
 		log.Printf("Registration failed for username %s: %v", req.Username, err)
 
@@ -477,6 +478,8 @@ func (h *KanbanHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.Error(w, "Unable to complete registration. Please check your submission constraints.", http.StatusBadRequest)
+
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)

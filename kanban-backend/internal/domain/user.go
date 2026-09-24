@@ -31,7 +31,7 @@ type Invitation struct {
 
 // UserRepository defines the database contract required to resolve user identities
 type UserRepository interface {
-	CreateUser(ctx context.Context, username string, passwordHash string, email string) (*User, error)
+	CreateUser(ctx context.Context, username string, passwordHash string, email string, inviteToken string) (*User, error)
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	GetUserByID(ctx context.Context, userID string) (*User, error)
 	CreateSession(ctx context.Context, userID string) (*Session, error)
@@ -44,7 +44,7 @@ type UserRepository interface {
 
 // AuthUserCase orchestrates credentials checks and login state verifications
 type AuthUseCase interface {
-	Register(ctx context.Context, username string, password string, email string) (*User, error)
+	Register(ctx context.Context, username string, password string, email string, inviteToken string) (*User, error)
 	Login(ctx context.Context, username string, password string) (string, error) // Returns a secure session ID string token
 	AuthenticateSession(ctx context.Context, sessionID string) (*User, error)
 	Logout(ctx context.Context, sessionID string) error

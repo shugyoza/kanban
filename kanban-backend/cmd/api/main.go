@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"kanban-backend/internal/handler"
+	"kanban-backend/internal/mailer"
 	"kanban-backend/internal/repository"
 	"kanban-backend/internal/usecase"
 	"kanban-backend/pkg/middleware"
@@ -41,7 +42,7 @@ func main() {
 	}
 	defer db.Close() // See note 1.
 
-	// 2. Enforce a timeout context to verify the actual connection. 
+	// 2. Enforce a timeout context to verify the actual connection.
 	defensiveTimingChecks := 3 * time.Second // 3 seconds instead of 2 seconds to allow for some latency (e.g. absorb standard disk or network hiccups without causing a false alarm crash during booting) in the connection.
 	ctx, cancel := context.WithTimeout(context.Background(), defensiveTimingChecks)
 	defer cancel() // See note 1.
@@ -80,7 +81,7 @@ func main() {
 
 	// 2. Inject the repository into the Business Logic layer (UseCase Interactor)
 	kanbanUseCase := usecase.NewKanbanInteractor(kanbanRepo)
-	authUseCase := usecase.NewAuthInteractor(kanbanRepo)
+	authUseCase := usecase.NewAuthInteractor(kanbanRepo, mailer.NewSMTPMailerFromEnv())
 
 	// 3. Inject the UseCase into the Outer Delivery Layer (HTTP Handler Plug)
 	kanbanHandler := handler.NewKanbanHandler(kanbanUseCase, authUseCase)
@@ -106,7 +107,7 @@ func main() {
 	http.HandleFunc("GET /api/auth/me", kanbanHandler.Authenticate)
 
 	serverPort := ":8080"
-	if (os.Getenv("PORT") != "") {
+	if os.Getenv("PORT") != "" {
 		serverPort = os.Getenv("PORT")
 	}
 

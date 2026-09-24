@@ -548,7 +548,6 @@ func (h *KanbanHandler) ValidateInvitationToken(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -611,6 +610,42 @@ func (h *KanbanHandler) ValidateEmailInput(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var req EmailInputValidationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	_, err := h.authUseCase.GetUserByEmail(r.Context(), req.Email)
+	if err != nil {
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, "Invalid email input", http.StatusBadRequest)
+
+			return
+		}
+
+		if strings.Contains(err.Error(), "user not found") {
+			http.Error(w, "No account is associated with this email address", http.StatusNotFound)
+
+			return
+		}
+
+		http.Error(w, "Unable to complete validation whether email has been registered", http.StatusInternalServerError)
+
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }

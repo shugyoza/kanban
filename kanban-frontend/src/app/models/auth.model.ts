@@ -4,7 +4,11 @@ export interface User {
     createdAt: string;
 }
 
-export interface Credentials {
+export interface LoginCredentials {
     username: string;
     password?: string;
+}
+
+export interface RegisterCredentials extends LoginCredentials {
+    email: string;
 }

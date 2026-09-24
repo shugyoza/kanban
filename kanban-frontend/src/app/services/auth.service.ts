@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Credentials, User } from '../models/auth.model';
+import { RegisterCredentials, LoginCredentials, User } from '../models/auth.model';
 import { catchError, finalize, Observable, of, tap } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
 
@@ -20,9 +20,9 @@ export class AuthService {
 
     public readonly currentUser = this.userResource.value.asReadonly();
 
-    public register(credentials: Credentials): Observable<void> {
+    public register(credentials: RegisterCredentials): Observable<void> {
         return this.http.post<void>(
-            'api/auth/register',
+            '/api/auth/register',
             credentials
         ).pipe(
             tap(() => {
@@ -31,7 +31,7 @@ export class AuthService {
         )
     }
 
-    public login(credentials: Credentials): Observable<void> {
+    public login(credentials: LoginCredentials): Observable<void> {
         return this.http.post<void>(
             '/api/auth/login',
             credentials

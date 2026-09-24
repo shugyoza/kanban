@@ -1,8 +1,8 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
-import { Credentials } from '../../models/auth.model';
+import { RegisterCredentials } from '../../models/auth.model';
 import { ActivatedRoute } from '@angular/router';
-import { form, FormField, minLength, required } from '@angular/forms/signals';
+import { disabled, email, form, FormField, minLength, required } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -18,15 +18,17 @@ export class RegisterComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly token = this.activatedRoute.snapshot.queryParamMap.get('token') ?? '';
 
-  private readonly credentialsModel = signal<Required<Credentials>>({
+  private readonly credentialsModel = signal<Required<RegisterCredentials>>({
     username: '',
-    password: ''
+    password: '',
+    email: 'stephenhanjaya@gmail.com', // TODO: update by grabbing from url queryParams
   })
 
   protected readonly registerForm = form(this.credentialsModel, schemaPath => {
+    disabled(schemaPath.email)
     required(schemaPath.username, { message: 'Username is required' });
     required(schemaPath.password, { message: 'Password is required' });
-    minLength(schemaPath.password, 8, { message: 'Password must be at least 8 characters long' })
+    minLength(schemaPath.password, 8, { message: 'Password must be at least 8 characters long' });
   });
 
   protected readonly loading = signal<boolean>(false);

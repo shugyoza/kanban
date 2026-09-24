@@ -13,6 +13,16 @@
     <form class="register-form-fields" (submit)="submitRegister($event)">
 
         <div class="input-group-row">
+            <label for="email">
+                Email
+            </label>
+            <input
+                type="text"
+                id="email"
+                [formField]="registerForm.email" />
+        </div>
+
+        <div class="input-group-row">
             <label for="username">
                 Username Handle
             </label>

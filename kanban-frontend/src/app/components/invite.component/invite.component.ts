@@ -34,7 +34,7 @@ export class InviteComponent {
         body: { email: value() },
       }),
       onSuccess: (response: HttpResponse<void>, { value }) => {
-        if (response.ok) {
+        if (response?.ok) {
           // Cache successful validations
           this.validatedEmails.add(value());
         }
@@ -80,7 +80,8 @@ export class InviteComponent {
 
     this.inviteService.getInvitationToken({
       userId,
-      email: this.inviteModel().email
+      email: this.inviteModel().email,
+      registerUrl: `${window.location.origin}/register`
     }).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({

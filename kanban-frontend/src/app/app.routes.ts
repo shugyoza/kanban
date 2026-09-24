@@ -5,7 +5,7 @@ import { inviteGuard } from './guards/invite.guard';
 export const routes: Routes = [
     {
         path: 'invite',
-        // canActivate: [authGuard],
+        canActivate: [authGuard],
         loadComponent: () => import('./components/invite.component/invite.component').then(m => m.InviteComponent)
     },
     {
@@ -14,7 +14,7 @@ export const routes: Routes = [
     },
     {
         path: 'register',
-        canActivate: [inviteGuard],
+        // canActivate: [inviteGuard], // TODO: re-instate once mailer implementations have been tested and verified
         loadComponent: () => import('./components/register.component/register.component').then(m => m.RegisterComponent)
     },
     {

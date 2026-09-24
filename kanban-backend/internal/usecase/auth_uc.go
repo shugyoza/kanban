@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"kanban-backend/internal/domain"
 	"kanban-backend/pkg/util"
+	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -12,11 +14,16 @@ import (
 
 type AuthInteractor struct {
 	userRepo domain.UserRepository
+	mailer   InvitationMailer
+}
+
+type InvitationMailer interface {
+	SendInvitation(ctx context.Context, recipient string, token string, registerURL string, expiresAt time.Time) error
 }
 
 // NewAuthInteractor initializes our security core with its required repository port dependency
-func NewAuthInteractor(repo domain.UserRepository) *AuthInteractor {
-	return &AuthInteractor{userRepo: repo}
+func NewAuthInteractor(repo domain.UserRepository, mailer InvitationMailer) *AuthInteractor {
+	return &AuthInteractor{userRepo: repo, mailer: mailer}
 }
 
 // Login verifies incoming string passwords against secure, database-store salted bcrypt hashes
@@ -113,7 +120,7 @@ func (uc *AuthInteractor) Logout(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID string, email string) (string, error) {
+func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID string, email string, registerURL string) (string, error) {
 	if userID == "" {
 
 		return "", fmt.Errorf("business rule violation: user id context is required")
@@ -124,11 +131,23 @@ func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID stri
 		return "", fmt.Errorf("business rule violation: email context is required")
 	}
 
+	parsedURL, err := url.ParseRequestURI(registerURL)
+	if registerURL == "" || err != nil || parsedURL.Host == "" || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		return "", fmt.Errorf("business rule violation: valid register URL is required")
+	}
+	if strings.Contains(registerURL, "?") {
+		return "", fmt.Errorf("business rule violation: register URL must not contain query parameters")
+	}
+
 	expirationTime := 7 * 24 * time.Hour
 	invitationToken, err := uc.userRepo.CreateAccountRegistrationInvitation(ctx, userID, email, expirationTime)
 	if err != nil {
 
 		return "", fmt.Errorf("CreateInvitationToken usecase failed to persist a new invitation: %w", err)
+	}
+
+	if err := uc.mailer.SendInvitation(ctx, email, invitationToken, registerURL, time.Now().UTC().Add(expirationTime)); err != nil {
+		return "", fmt.Errorf("CreateInvitationToken usecase failed to send invitation email: %w", err)
 	}
 
 	return invitationToken, nil
@@ -142,7 +161,7 @@ func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token str
 
 	invitation, err := uc.userRepo.GetAccountRegistrationInvitationByToken(ctx, token)
 	if err != nil {
-		
+
 		return nil, fmt.Errorf("ValidateInvitationToken usecase failed to extract invitation for the token: %s: %w", token, err)
 	}
 
@@ -168,5 +187,4 @@ func (uc *AuthInteractor) ValidateEmail(ctx context.Context, email string) (stri
 	}
 
 	return address, domain, nil
-
 }

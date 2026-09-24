@@ -15,8 +15,9 @@ type EmailInputValidationRequest struct {
 }
 
 type InvitationRequest struct {
-	UserID string `json:"userId"`
-	Email string `json:"email"`
+	UserID      string `json:"userId"`
+	Email       string `json:"email"`
+	RegisterURL string `json:"registerUrl"`
 }
 
 type InvitationResponse struct {
@@ -39,51 +40,51 @@ type RegisterRequest struct {
 
 // UserResponse filters out sensitive fields when sending account profile to the client
 type UserResponse struct {
-	ID string `json:"id"`
-	Username string `json:"username"`
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
 type KanbanHandler struct {
-	useCase domain.KanbanUseCase
+	useCase     domain.KanbanUseCase
 	authUseCase domain.AuthUseCase
 }
 
 // MoveTaskPayload defines the strict JSON contract from the frontend
 type MoveTaskPayload struct {
-	TaskID string `json:"taskId"`
+	TaskID         string `json:"taskId"`
 	TargetColumnID string `json:"targetColumnId"`
-	TargetPosition int `json:"targetPosition"`
+	TargetPosition int    `json:"targetPosition"`
 }
 
 type CreateTaskPayload struct {
-	ColumnID string `json:"columnId"`
-	Title string `json:"title"`
+	ColumnID    string `json:"columnId"`
+	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 type DeleteTaskPayload struct {
-	ColumnID string `json:"columnId"`
-	TaskID string `json:"taskId"`
-	TaskPosition int `json:"taskPosition"`
+	ColumnID     string `json:"columnId"`
+	TaskID       string `json:"taskId"`
+	TaskPosition int    `json:"taskPosition"`
 }
 
 type UpdateTaskPayload struct {
-	TaskID string `json:"taskId"`
-	Title string `json:"title"`
+	TaskID      string `json:"taskId"`
+	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 type ArchiveTaskPayload struct {
-	ColumnID string `json:"columnId"`
-	TaskID string `json:"taskId"`
-	TaskPosition int `json:"taskPosition"`
+	ColumnID     string `json:"columnId"`
+	TaskID       string `json:"taskId"`
+	TaskPosition int    `json:"taskPosition"`
 }
 
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
 func NewKanbanHandler(uc domain.KanbanUseCase, auc domain.AuthUseCase) *KanbanHandler {
 	return &KanbanHandler{
-		useCase: uc,
+		useCase:     uc,
 		authUseCase: auc,
 	}
 }
@@ -249,7 +250,7 @@ func (h *KanbanHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	err := h.useCase.EditTask(r.Context(), payload.TaskID, payload.Title, payload.Description)
 	if err != nil {
 		log.Printf("Error executing task update workflow: %v", err)
-	
+
 		if strings.Contains(err.Error(), "business rule violation") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 
@@ -279,7 +280,6 @@ func (h *KanbanHandler) ArchiveTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-
 	err := h.useCase.ArchiveTask(r.Context(), payload.ColumnID, payload.TaskID, payload.TaskPosition)
 	if err != nil {
 		log.Printf("Error executing task archiving workflow: %v", err)
@@ -399,13 +399,13 @@ func (h *KanbanHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Set HTTP-Only Cookie wrapper to make it completely invisible to malicious JS (XSS protection)
 	http.SetCookie(w, &http.Cookie{
-		Name: "kanban_session",
-		Value: sessionID,
-		Path: "/",
-		Expires: time.Now().Add(24 * time.Hour), // extends cookie session tracking window to 24 hours
-		HttpOnly: true, // protects token strings from document.cookie queries
-		Secure: false, // keep as false strictly for local localhost dev environment
-		SameSite: http.SameSiteLaxMode, // guards system state from CSRF cross-origin attack vectors
+		Name:     "kanban_session",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  time.Now().Add(24 * time.Hour), // extends cookie session tracking window to 24 hours
+		HttpOnly: true,                           // protects token strings from document.cookie queries
+		Secure:   false,                          // keep as false strictly for local localhost dev environment
+		SameSite: http.SameSiteLaxMode,           // guards system state from CSRF cross-origin attack vectors
 	})
 
 	w.WriteHeader(http.StatusNoContent)
@@ -421,25 +421,25 @@ func (h *KanbanHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Extract active session cookie
 	cookie, err := r.Cookie("kanban_session")
-	if err != nil  || cookie.Value == "" {
+	if err != nil || cookie.Value == "" {
 		http.Error(w, "Session cookie not found", http.StatusBadRequest)
 
 		return
 	}
 
-	// 2. Remove from the sessions table, the session relevant to the sessionID / cookie value 
+	// 2. Remove from the sessions table, the session relevant to the sessionID / cookie value
 	sessionID := cookie.Value
 	_ = h.authUseCase.Logout(r.Context(), sessionID)
 
 	// Clear the browser cookie jar by forcing an immediate expiration context
 	http.SetCookie(w, &http.Cookie{
-		Name: "kanban_session",
-		Value: "",
-		Path: "/",
-		Expires: time.Unix(0, 0), // Sets expiration to Jan 1, 1970, instantly destroying the cookie
-		MaxAge: -1, // Ensures immediate eviction in modern browsers
+		Name:     "kanban_session",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0), // Sets expiration to Jan 1, 1970, instantly destroying the cookie
+		MaxAge:   -1,              // Ensures immediate eviction in modern browsers
 		HttpOnly: true,
-		Secure: false, // Keep matching with local dev setup flags
+		Secure:   false, // Keep matching with local dev setup flags
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -505,8 +505,8 @@ func (h *KanbanHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(UserResponse{
-		ID: user.ID,
-		Username: user.Username,
+		ID:        user.ID,
+		Username:  user.Username,
 		CreatedAt: user.CreatedAt,
 	})
 }
@@ -567,7 +567,7 @@ func (h *KanbanHandler) CreateInvitationToken(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	invitationToken, err := h.authUseCase.CreateInvitationToken(r.Context(), req.UserID, req.Email)
+	invitationToken, err := h.authUseCase.CreateInvitationToken(r.Context(), req.UserID, req.Email, req.RegisterURL)
 	if err != nil {
 		log.Printf("Invitation generating by userId: %s, failed for email: %s: %v", req.UserID, req.Email, err)
 

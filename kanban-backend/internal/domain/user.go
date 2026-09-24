@@ -39,6 +39,7 @@ type UserRepository interface {
 	DeleteSessionByID(ctx context.Context, sessionID string) error
 	CreateAccountRegistrationInvitation(ctx context.Context, userID string, email string, expirationTime time.Duration) (string, error)
 	GetAccountRegistrationInvitationByToken(ctx context.Context, token string) (*Invitation, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }
 
 // AuthUserCase orchestrates credentials checks and login state verifications
@@ -50,4 +51,5 @@ type AuthUseCase interface {
 	CreateInvitationToken(ctx context.Context, userID string, email string, registerURL string) (string, error)
 	ValidateInvitationToken(ctx context.Context, token string) (*Invitation, error)
 	ValidateEmail(ctx context.Context, email string) (string, string, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }

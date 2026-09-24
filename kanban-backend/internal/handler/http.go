@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+type ValidateEmailRegisteredResponse struct {
+	Registered bool `json:"registered"`
+}
+
 type EmailInputValidationRequest struct {
 	Email string `json:"email"`
 }
@@ -637,7 +641,11 @@ func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.R
 		}
 
 		if strings.Contains(err.Error(), "user not found") {
-			http.Error(w, "No account is associated with this email address", http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(ValidateEmailRegisteredResponse{
+				Registered: false,
+			})
 
 			return
 		}
@@ -647,5 +655,9 @@ func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(ValidateEmailRegisteredResponse{
+		Registered: true,
+	})
 }

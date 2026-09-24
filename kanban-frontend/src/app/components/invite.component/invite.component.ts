@@ -89,7 +89,7 @@ export class InviteComponent {
         const { token } = response;
         const baseHref = window.location.origin;
 
-        const invitationURL = `${baseHref}/register?token=${token}`;
+        const invitationURL = `${baseHref}/register?email=${this.inviteModel().email}&token=${token}`;
         this.invitationURL.set(invitationURL);
       },
       error: error => {

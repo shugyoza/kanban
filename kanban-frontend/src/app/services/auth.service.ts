@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { RegisterCredentials, LoginCredentials, User } from '../models/auth.model';
@@ -62,6 +62,14 @@ export class AuthService {
 
                 return of(null)
             })
+        )
+    }
+
+    public validateEmailRegistered(email: string): Observable<HttpResponse<{ registered: boolean }>> {
+        return this.http.post<{ registered: boolean }>(
+            '/api/auth/email/validate',
+            { email },
+            { observe: 'response' }
         )
     }
 }

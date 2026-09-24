@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { RegisterCredentials } from '../../models/auth.model';
 import { ActivatedRoute } from '@angular/router';
-import { disabled, email, form, FormField, minLength, required } from '@angular/forms/signals';
+import { disabled, form, FormField, minLength, required } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -16,12 +16,13 @@ export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly token = this.activatedRoute.snapshot.queryParamMap.get('token') ?? '';
+  private readonly token = (this.activatedRoute.snapshot.queryParamMap.get('token') ?? '').trim();
+  private readonly email = (this.activatedRoute.snapshot.queryParamMap.get('email') ?? '').trim();
 
   private readonly credentialsModel = signal<Required<RegisterCredentials>>({
     username: '',
     password: '',
-    email: 'stephenhanjaya@gmail.com', // TODO: update by grabbing from url queryParams
+    email: this.email,
   })
 
   protected readonly registerForm = form(this.credentialsModel, schemaPath => {

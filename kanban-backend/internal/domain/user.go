@@ -7,26 +7,26 @@ import (
 
 // User represents a core account profile entity inside our system layout
 type User struct {
-	ID string `json:"id"`
-	Username string `json:"username"`
-	PasswordHash string `json:"-"` // Never expose the raw password hash strings over json payload wires
-	Email string `json:"email"`
-	Phone *string `json:"phone,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID           string    `json:"id"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"-"` // Never expose the raw password hash strings over json payload wires
+	Email        string    `json:"email"`
+	Phone        *string   `json:"phone,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type Session struct {
-	ID string `json:"id"`
-	UserID string `json:"userId"`
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 type Invitation struct {
-	Token string `json:"token"`
-	CreatedBy string `json:"createdBy"`
-	Email string `json:"email"`
+	Token     string    `json:"token"`
+	CreatedBy string    `json:"createdBy"`
+	Email     string    `json:"email"`
 	ExpiresAt time.Time `json:"expiresAt"`
-	UsedAt time.Time `json:"usedAt"`
+	UsedAt    time.Time `json:"usedAt"`
 }
 
 // UserRepository defines the database contract required to resolve user identities
@@ -47,7 +47,7 @@ type AuthUseCase interface {
 	Login(ctx context.Context, username string, password string) (string, error) // Returns a secure session ID string token
 	AuthenticateSession(ctx context.Context, sessionID string) (*User, error)
 	Logout(ctx context.Context, sessionID string) error
-	CreateInvitationToken(ctx context.Context, userID string, email string) (string, error)
+	CreateInvitationToken(ctx context.Context, userID string, email string, registerURL string) (string, error)
 	ValidateInvitationToken(ctx context.Context, token string) (*Invitation, error)
 	ValidateEmail(ctx context.Context, email string) (string, string, error)
 }

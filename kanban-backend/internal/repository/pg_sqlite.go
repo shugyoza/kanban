@@ -67,12 +67,12 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 		// 2. Collect unique columns found in the join
 		if cID.Valid {
 			if _, exists := columnMap[cID.String]; !exists {
-			columnMap[cID.String] = domain.ColumnAggregate{
-				ID: cID.String,
-				Title: cTitle.String,
-				Position: int(cPosition.Int32),
-				Tasks: []domain.Task{},
-			}
+				columnMap[cID.String] = domain.ColumnAggregate{
+					ID:       cID.String,
+					Title:    cTitle.String,
+					Position: int(cPosition.Int32),
+					Tasks:    []domain.Task{},
+				}
 
 			}
 		}
@@ -80,11 +80,11 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 		// 3. Collect unique tasks found in the join
 		if tID.Valid && tColumnID.Valid {
 			taskMap[tColumnID.String] = append(taskMap[tColumnID.String], domain.Task{
-				ID: tID.String,
-				ColumnID: tColumnID.String,
-				Title: tTitle.String,
+				ID:          tID.String,
+				ColumnID:    tColumnID.String,
+				Title:       tTitle.String,
 				Description: tDescription.String,
-				Position: int(tPosition.Int32),
+				Position:    int(tPosition.Int32),
 			})
 		}
 	}
@@ -142,8 +142,8 @@ func (r *SQLBoardRepository) UpdateTaskPositions(ctx context.Context, taskID str
 		if currentPosition < targetPosition {
 			// shifting down: push intermediate cards up
 			_, err = tx.ExecContext(
-				ctx, 
-				"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND position <= ? AND is_archived = 0;", 
+				ctx,
+				"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND position <= ? AND is_archived = 0;",
 				targetColumnID, currentPosition, targetPosition,
 			)
 		} else if currentPosition > targetPosition {
@@ -234,11 +234,11 @@ func (r *SQLBoardRepository) InsertTask(ctx context.Context, columnID string, ti
 
 	// 5. RETURN VALUE: pass a pointer to the clean domain entity back up the stack
 	return &domain.Task{
-		ID: newID,
-		ColumnID: columnID,
-		Title: title,
+		ID:          newID,
+		ColumnID:    columnID,
+		Title:       title,
 		Description: description,
-		Position: defaultPosition,
+		Position:    defaultPosition,
 	}, nil
 }
 
@@ -265,13 +265,12 @@ func (r *SQLBoardRepository) DeleteTask(ctx context.Context, columnID string, de
 
 	// Re-index all the rows within the column
 	_, err = tx.ExecContext(
-		ctx, 
-		"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND is_archived = 0;", 
+		ctx,
+		"UPDATE tasks SET position = position - 1 WHERE column_id = ? AND position > ? AND is_archived = 0;",
 		columnID, deletedTaskPosition)
 	if err != nil {
 		return fmt.Errorf("failed to close position gap following deletion: %w", err)
 	}
-
 
 	// Explicitly commit the transaction permanently to disk file storage
 	if err = tx.Commit(); err != nil {
@@ -301,7 +300,7 @@ func (r *SQLBoardRepository) UpdateTaskDetails(ctx context.Context, taskID strin
 	return nil
 }
 
-func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,taskID string, taskPosition int) error {
+func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error {
 	// 1. Initialize a strict ACID db transaction block
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -312,8 +311,8 @@ func (r *SQLBoardRepository) ArchiveTask(ctx context.Context, columnID string,ta
 
 	// 2. Mark the task as archived in the database
 	_, err = tx.ExecContext(
-		ctx, 
-		"UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", 
+		ctx,
+		"UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
 		taskID)
 	if err != nil {
 		return fmt.Errorf("failed to archive task: %w", err)
@@ -418,16 +417,16 @@ func (r *SQLBoardRepository) CreateUser(ctx context.Context, username string, pa
 	_, err := r.db.ExecContext(
 		ctx,
 		`INSERT INTO users (id, username, password_hash, email, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP);`,
-		newID, username, email, passwordHash,
+		newID, username, passwordHash, email,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist new user profile: %w", err)
 	}
 
 	return &domain.User{
-		ID: newID,
-		Username: username,
-		Email: email,
+		ID:        newID,
+		Username:  username,
+		Email:     email,
 		CreatedAt: time.Now(),
 	}, nil
 }
@@ -478,7 +477,7 @@ func (r *SQLBoardRepository) GetUserByID(ctx context.Context, userID string) (*d
 	if phone.Valid {
 		u.Phone = &phone.String
 	}
-	
+
 	return &u, nil
 }
 
@@ -511,8 +510,8 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
 	sessionID := fmt.Sprintf("sess-%d-%s", now.UnixNano(), userID)
 	session := &domain.Session{
-		ID: sessionID,
-		UserID: userID,
+		ID:        sessionID,
+		UserID:    userID,
 		ExpiresAt: now.Add(24 * time.Hour),
 	}
 
@@ -540,7 +539,6 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 		return nil, fmt.Errorf("failed to persist new session: %w", err)
 	}
 
-
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit session transaction: %w", err)
 	}
@@ -548,7 +546,7 @@ func (r *SQLBoardRepository) CreateSession(ctx context.Context, userID string) (
 	return session, nil
 }
 
-func (r *SQLBoardRepository) DeleteSessionByID (ctx context.Context, sessionID string) error {
+func (r *SQLBoardRepository) DeleteSessionByID(ctx context.Context, sessionID string) error {
 	result, err := r.db.ExecContext(
 		ctx,
 		"DELETE FROM sessions WHERE id = ?;",
@@ -591,7 +589,7 @@ func (r *SQLBoardRepository) GetAccountRegistrationInvitationByToken(ctx context
 	if usedAtPointer != nil {
 		i.UsedAt = *usedAtPointer // if nil, i.UsedAt remains time.time{} (the zero value). In this case, in usecase layer, the validation should implement, e.g: if !invitation.UsedAt.IsZero() { ... }
 		// alternatively: i.UsedAt = usedAtPointer. This is a direct assignment of the pointer. In this case, in usecase layer, the validation should implement, e.g: if invitation.UsedAt != nil { ... }
-	} 
+	}
 
 	return &i, nil
 }
@@ -612,10 +610,10 @@ func (r *SQLBoardRepository) CreateAccountRegistrationInvitation(ctx context.Con
 
 	// create invitation struct
 	invitation := &domain.Invitation{
-		Token: tokenID,
+		Token:     tokenID,
 		CreatedBy: userID,
 		ExpiresAt: now.Add(expirationTime),
-		Email: email,
+		Email:     email,
 	}
 
 	// persist invitation record to database

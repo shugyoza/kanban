@@ -635,23 +635,8 @@ func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.R
 	}
 	defer r.Body.Close()
 
-	_, err := h.authUseCase.GetUserByEmail(r.Context(), req.Email)
+	isRegistered, err := h.authUseCase.IsEmailRegistered(r.Context(), req.Email)
 	if err != nil {
-		if strings.Contains(err.Error(), "business rule violation") {
-			http.Error(w, "Invalid email input", http.StatusBadRequest)
-
-			return
-		}
-
-		if strings.Contains(err.Error(), "user not found") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(ValidateEmailRegisteredResponse{
-				Registered: false,
-			})
-
-			return
-		}
 
 		http.Error(w, "Unable to complete validation whether email has been registered", http.StatusInternalServerError)
 
@@ -661,6 +646,6 @@ func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ValidateEmailRegisteredResponse{
-		Registered: true,
+		Registered: isRegistered,
 	})
 }

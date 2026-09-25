@@ -99,7 +99,7 @@ func main() {
 	http.HandleFunc("DELETE /api/tasks", kanbanHandler.HandleTask)
 
 	http.HandleFunc("POST /api/email/validate", kanbanHandler.ValidateEmailInput) // Checking whether email input value is valid
-	http.HandleFunc("POST /api/auth/email/validate", kanbanHandler.ValidateEmailRegistered) // Checking whether email has been registered and connected to a User
+	http.HandleFunc("POST /api/auth/email/is-registered", kanbanHandler.ValidateEmailRegistered) // Checking whether email has been registered and connected to a User
 	http.HandleFunc("POST /api/auth/invite-token/validate", kanbanHandler.ValidateInvitationToken)
 	http.HandleFunc("POST /api/auth/invite-token/create", kanbanHandler.CreateInvitationToken)
 	http.HandleFunc("DELETE /api/auth/logout", kanbanHandler.Logout)

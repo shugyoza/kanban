@@ -54,4 +54,5 @@ type AuthUseCase interface {
 	ValidateInvitationToken(ctx context.Context, token string) (*Invitation, error)
 	ValidateEmail(ctx context.Context, email string) (string, string, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	IsEmailRegistered(ctx context.Context, email string) (bool, error)
 }

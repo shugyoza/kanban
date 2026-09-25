@@ -133,6 +133,27 @@ func (uc *AuthInteractor) Logout(ctx context.Context, sessionID string) error {
 	return nil
 }
 
+func (uc *AuthInteractor) IsEmailRegistered(ctx context.Context, email string) (bool, error) {
+	if email == "" {
+
+		return false, fmt.Errorf("business rule violation: email context is required")
+	}
+
+	_, _, err := uc.ValidateEmail(ctx, email)
+	if err != nil {
+
+		return false, fmt.Errorf("IsEmailRegistered usecase failed to validate email input")
+	}
+
+	isRegistered, err := uc.userRepo.IsEmailRegistered(ctx, email)
+	if err != nil {
+
+		return false, fmt.Errorf("IsEmailRegistered usecase failed to verify any User associated with the email")
+	}
+
+	return isRegistered, nil
+}
+
 func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID string, email string, registerURL string) (string, error) {
 	if userID == "" {
 

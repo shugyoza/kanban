@@ -37,7 +37,9 @@ type UserRepository interface {
 	CreateSession(ctx context.Context, userID string) (*Session, error)
 	GetSessionByID(ctx context.Context, sessionID string) (*Session, error)
 	DeleteSessionByID(ctx context.Context, sessionID string) error
+	IsEmailRegistered(ctx context.Context, email string) (bool, error)
 	CreateAccountRegistrationInvitation(ctx context.Context, userID string, email string, expirationTime time.Duration) (string, error)
+	GetAccountRegistrationInvitationByEmail(ctx context.Context, email string) (*Invitation, error)
 	GetAccountRegistrationInvitationByToken(ctx context.Context, token string) (*Invitation, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }

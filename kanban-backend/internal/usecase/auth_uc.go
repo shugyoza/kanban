@@ -144,6 +144,24 @@ func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID stri
 		return "", fmt.Errorf("business rule violation: email context is required")
 	}
 
+	// validate email input
+	_, _, err := uc.ValidateEmail(ctx, email)
+	if err != nil {
+
+		return "", fmt.Errorf("business rule violation: valid email context is required")
+	}
+
+	// validate if email has been registered and associated to a User account
+	isRegistered, err := uc.userRepo.IsEmailRegistered(ctx, email)
+	if err != nil {
+
+		return "", fmt.Errorf("CreateInvitationToken usecase failed to verify any User associated with the email")
+	}
+	if isRegistered == true {
+
+		return "", fmt.Errorf("business rule violation: email has been registered and associated to a User")
+	}
+
 	parsedURL, err := url.ParseRequestURI(registerURL)
 	if registerURL == "" || err != nil || parsedURL.Host == "" || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
 		return "", fmt.Errorf("business rule violation: valid register URL is required")
@@ -152,6 +170,10 @@ func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID stri
 		return "", fmt.Errorf("business rule violation: register URL must not contain query parameters")
 	}
 
+	// check whether there is already a valid token has been generated, not yet expired, and never been used
+	i, err := uc.userRepo.GetAccountRegistrationInvitationByEmail(ctx, email)
+	if err != nil {
+		// generate a new token and email a new invitation
 	expirationTime := 7 * 24 * time.Hour
 	invitationToken, err := uc.userRepo.CreateAccountRegistrationInvitation(ctx, userID, email, expirationTime)
 	if err != nil {
@@ -164,6 +186,13 @@ func (uc *AuthInteractor) CreateInvitationToken(ctx context.Context, userID stri
 	}
 
 	return invitationToken, nil
+	}
+
+	if err := uc.mailer.SendInvitation(ctx, email, i.Token, registerURL, i.ExpiresAt); err != nil {
+		return "", fmt.Errorf("CreateInvitationToken usecase failed to send invitation email: %w", err)
+	}
+
+	return i.Token, nil
 }
 
 func (uc *AuthInteractor) ValidateInvitationToken(ctx context.Context, token string) (*domain.Invitation, error) {

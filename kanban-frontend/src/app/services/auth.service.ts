@@ -67,7 +67,7 @@ export class AuthService {
 
     public validateEmailRegistered(email: string): Observable<HttpResponse<{ registered: boolean }>> {
         return this.http.post<{ registered: boolean }>(
-            '/api/auth/email/validate',
+            '/api/auth/email/is-registered',
             { email },
             { observe: 'response' }
         )

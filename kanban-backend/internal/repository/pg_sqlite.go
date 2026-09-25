@@ -482,6 +482,27 @@ func (r *SQLBoardRepository) GetUserByUsername(ctx context.Context, username str
 	return &u, nil
 }
 
+// IsEmailRegistered checks if an email has been registered and associated to a User
+func (r *SQLBoardRepository) IsEmailRegistered(ctx context.Context, email string) (bool, error) {
+	var u domain.User
+
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT id FROM users WHERE email = ?;`,
+		email,
+	).Scan(&u.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to query user row by email: %w", err)
+	}
+
+	return true, nil
+}
+
 // GetUserByEmail extract account details safely using the given email
 func (r *SQLBoardRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var u domain.User
@@ -616,6 +637,34 @@ func (r *SQLBoardRepository) DeleteSessionByID(ctx context.Context, sessionID st
 	}
 
 	return nil
+}
+
+func (r *SQLBoardRepository) GetAccountRegistrationInvitationByEmail(ctx context.Context, email string) (*domain.Invitation, error) {
+// Extract an invitation record that has not been used nor expired from the database based on the given email
+	var i domain.Invitation
+	var usedAtPointer *time.Time
+	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT token, expires_at, used_at FROM invitations WHERE email = ? AND expires_at > ? AND used_at = ?",
+		email, now, nil,
+	).Scan(&i.Token, &i.ExpiresAt, &usedAtPointer)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+
+			return nil, fmt.Errorf("valid invitation not found for email: %s: %w", email, err)
+		}
+
+		return nil, fmt.Errorf("failed to extract invitation block: %w", err)
+	}
+
+	if usedAtPointer != nil {
+		i.UsedAt = *usedAtPointer // if nil, i.UsedAt remains time.time{} (the zero value). In this case, in usecase layer, the validation should implement, e.g: if !invitation.UsedAt.IsZero() { ... }
+		// alternatively: i.UsedAt = usedAtPointer. This is a direct assignment of the pointer. In this case, in usecase layer, the validation should implement, e.g: if invitation.UsedAt != nil { ... }
+	}
+
+	return &i, nil
 }
 
 // Extract an invitation record from the database based on the given invitation token

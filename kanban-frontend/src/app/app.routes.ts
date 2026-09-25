@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { inviteGuard } from './guards/invite.guard';
+import { inSessionGuard } from './guards/in-session.guard';
 
 export const routes: Routes = [
     {
@@ -10,11 +11,12 @@ export const routes: Routes = [
     },
     {
         path: 'login',
+        canActivate: [inSessionGuard],
         loadComponent: () => import('./components/login.component/login.component').then(m => m.LoginComponent)
     },
     {
         path: 'register',
-        // canActivate: [inviteGuard], // TODO: re-instate once mailer implementations have been tested and verified
+        canActivate: [inSessionGuard, inviteGuard],
         loadComponent: () => import('./components/register.component/register.component').then(m => m.RegisterComponent)
     },
     {

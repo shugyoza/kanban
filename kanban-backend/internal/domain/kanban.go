@@ -38,6 +38,7 @@ type BoardRepository interface {
 	ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	GetArchivedTasks(ctx context.Context, boardID string) ([]Task, error)
+	InsertBoard(ctx context.Context, title string, userID string) (string, error)
 }
 
 // KanbanUseCase defines the business rules available for the Kanban board.
@@ -50,4 +51,5 @@ type KanbanUseCase interface {
 	ArchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	UnarchiveTask(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	GetArchivedTasks(ctx context.Context, boardID string) ([]Task, error)
+	CreateBoard(ctx context.Context, title string, userID string) (string, error)
 }

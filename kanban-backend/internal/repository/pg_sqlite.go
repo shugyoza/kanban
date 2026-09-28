@@ -20,6 +20,26 @@ func NewSQLBoardRepository(db *sql.DB) *SQLBoardRepository {
 	return &SQLBoardRepository{db: db}
 }
 
+func (r *SQLBoardRepository) InsertBoard(ctx context.Context, title string, userID string) (string, error) {
+	now := time.Now().UTC() // Enforce UTC because the sql table CURRENT_TIMESTAMP default to UTC timezone
+
+	// generate board id
+	boardID := fmt.Sprintf("boar-%d-%s", now.UnixNano(), userID)
+
+	_, err := r.db.ExecContext(
+		ctx,
+		`INSERT INTO boards (id, title, user_id, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP);`,
+		boardID, title, userID,
+	)
+
+	if err != nil {
+
+		return "", fmt.Errorf("failed to persist a new board: %w", err)
+	}
+
+	return boardID, nil
+}
+
 func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
 	query := `
 		SELECT 

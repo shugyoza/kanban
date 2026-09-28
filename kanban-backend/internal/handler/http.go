@@ -55,6 +55,14 @@ type KanbanHandler struct {
 	authUseCase domain.AuthUseCase
 }
 
+type CreateBoardPayload struct {
+	Title string `json:"title"`
+}
+
+type CreateBoardResponse struct {
+	BoardID string `json:"boardId"`
+}
+
 // MoveTaskPayload defines the strict JSON contract from the frontend
 type MoveTaskPayload struct {
 	TaskID         string `json:"taskId"`
@@ -94,8 +102,69 @@ func NewKanbanHandler(uc domain.KanbanUseCase, auc domain.AuthUseCase) *KanbanHa
 	}
 }
 
+func (h *KanbanHandler) CreateBoard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "Session cookie not found", http.StatusBadRequest)
+
+		return
+	}
+
+	sessionID := cookie.Value
+	user, err := h.authUseCase.AuthenticateSession(r.Context(), sessionID)
+	if err != nil {
+		log.Printf("Session validation failed: %v", err)
+		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+
+		return
+	}
+
+	var payload CreateBoardPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	boardID, err := h.useCase.CreateBoard(r.Context(), payload.Title, user.ID)
+	if err != nil {
+		log.Printf("Error executing board creation workflow: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		http.Error(w, "Internal server creation failure", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(CreateBoardResponse{
+		BoardID: boardID,
+	})
+
+	if err != nil {
+		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+
+		return
+	}
+
+}
+
 // GetBoard handles requests matching: GET /api/boards/boards?id=xxx
-func (handler *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
+func (h *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
 	// 1. Enforce strict HTTP method checking
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -112,7 +181,7 @@ func (handler *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3/ Trigger our core Hexagonal Business Interactor
-	boardTree, err := handler.useCase.GetBoardDetails(r.Context(), boardID)
+	boardTree, err := h.useCase.GetBoardDetails(r.Context(), boardID)
 	if err != nil {
 		if err.Error() == "board not found" {
 			http.Error(w, "Board not found", http.StatusNotFound)

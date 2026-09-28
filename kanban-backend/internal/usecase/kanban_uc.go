@@ -30,6 +30,26 @@ func NewKanbanInteractor(repo domain.BoardRepository) *KanbanInteractor {
 	return &KanbanInteractor{repo: repo}
 }
 
+func (uc *KanbanInteractor) CreateBoard(ctx context.Context, title string, userID string) (string, error) {
+	if title == "" {
+
+		return "", fmt.Errorf("business rule violation: board title is mandatory for creating a new board")
+	}
+
+	if userID == "" {
+
+		return "", fmt.Errorf("business rule violation: userID is mandatory for creating a new board")
+	}
+
+	boardID, err := uc.repo.InsertBoard(ctx, title, userID)
+	if err != nil {
+
+		return "", fmt.Errorf("CreateBoard usecase failed to persist a new board: %w", err)
+	}
+
+	return boardID, nil
+}
+
 // GetBoardDetails orchestrates the data retrieval and formats the nested tree
 func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
 	//  1.  Fetch the raw models from the database repository layer

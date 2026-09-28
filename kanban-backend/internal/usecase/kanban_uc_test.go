@@ -20,6 +20,11 @@ type mockBoardRepository struct {
 	archiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	unarchiveTask func(ctx context.Context, columnID string, taskID string, taskPosition int) error
 	getArchivedTasks func(ctx context.Context, boardID string) ([]domain.Task, error)
+	insertBoard func(ctx context.Context, title string, userID string) (string, error)
+}
+
+func (m *mockBoardRepository) InsertBoard(ctx context.Context, title string, userID string) (string, error) {
+	return m.insertBoard(ctx, title, userID)
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository

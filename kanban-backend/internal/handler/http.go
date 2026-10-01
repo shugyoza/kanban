@@ -156,38 +156,95 @@ func (h *KanbanHandler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetBoard handles requests matching: GET /api/boards/boards?id=xxx
-func (h *KanbanHandler) GetBoard(w http.ResponseWriter, r *http.Request) {
-	// 1. Enforce strict HTTP method checking
+// GetBoardsForUser handles requests matching: GET /api/boards
+func (h *KanbanHandler) GetBoardsForUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 
 		return
 	}
 
-	// 2. Extract the target board ID from the query string params
-	boardID := r.URL.Query().Get("id")
-	if boardID == "" {
-		http.Error(w, "Missing required board 'id' query parameter", http.StatusBadRequest)
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "Session cookie not found", http.StatusBadRequest)
 
 		return
 	}
 
-	// 3/ Trigger our core Hexagonal Business Interactor
-	boardTree, err := h.useCase.GetBoardDetails(r.Context(), boardID)
+	sessionID := cookie.Value
+	user, err := h.authUseCase.AuthenticateSession(r.Context(), sessionID)
 	if err != nil {
-		if err.Error() == "board not found" {
-			http.Error(w, "Board not found", http.StatusNotFound)
-		} else {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+		log.Printf("Session validation failed: %v", err)
+		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+
+		return
 	}
 
-	// 4. Set standard web API response headers
+	defer r.Body.Close()
+
+	boards, err := h.useCase.GetBoardsForUser(r.Context(), user.ID)
+	if err != nil {
+		log.Printf("Error retrieving boards for user %s: %v", user.ID, err)
+		http.Error(w, "Internal server retrieval failure", http.StatusInternalServerError)
+
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// 5. Serialize the boardTree pointer struct to camelCase JSON and write it to the response
+	if err := json.NewEncoder(w).Encode(boards); err != nil {
+		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
+
+		return
+	}
+
+}
+
+// GetBoardTreeById handles requests matching: GET /api/boards/{id}
+func (h *KanbanHandler) GetBoardTreeById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "Session cookie not found", http.StatusBadRequest)
+
+		return
+	}
+
+	sessionID := cookie.Value
+	user, err := h.authUseCase.AuthenticateSession(r.Context(), sessionID)
+	if err != nil {
+		log.Printf("Session validation failed: %v", err)
+		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+
+		return
+	}
+
+	defer r.Body.Close()
+
+	boardID := r.PathValue("id")
+	// We don't need to check boardID is empty here since the router enforces it
+	boardTree, err := h.useCase.GetBoardDetails(r.Context(), user.ID, boardID)
+	if err != nil {
+		if err.Error() == "board not found" {
+			http.Error(w, "Board not found", http.StatusNotFound)
+
+			return
+		}
+
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	if err := json.NewEncoder(w).Encode(boardTree); err != nil {
 		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
 	}

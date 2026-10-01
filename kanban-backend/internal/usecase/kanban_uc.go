@@ -50,10 +50,34 @@ func (uc *KanbanInteractor) CreateBoard(ctx context.Context, title string, userI
 	return boardID, nil
 }
 
+func (uc *KanbanInteractor) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {
+	if userID == "" {
+
+		return nil, fmt.Errorf("business rule violation: userID is mandatory for retrieving boards")
+	}
+
+	boards, err := uc.repo.GetBoardsForUser(ctx, userID)
+	if err != nil {
+
+		return nil, fmt.Errorf("GetBoardsForUser usecase failed to retrieve boards: %w", err)
+	}
+
+	return boards, nil
+}
+
 // GetBoardDetails orchestrates the data retrieval and formats the nested tree
-func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
+func (uc *KanbanInteractor) GetBoardDetails(ctx context.Context, userID string, boardID string) (*domain.BoardAggregate, error) {
+	if userID == "" {
+
+		return nil, fmt.Errorf("business rule violation: userID is mandatory for retrieving a board details")
+	}
+
+	if boardID == "" {
+		return nil, fmt.Errorf("business rule violation: board ID is mandatory for retrieving a board details")
+	}
+
 	//  1.  Fetch the raw models from the database repository layer
-	boardAggregate, err := uc.repo.GetBoardTree(ctx, boardID)
+	boardAggregate, err := uc.repo.GetBoardTree(ctx, userID, boardID)
 	if err != nil {
 		return nil, fmt.Errorf("usecase failed to get board details: %w", err)
 	}

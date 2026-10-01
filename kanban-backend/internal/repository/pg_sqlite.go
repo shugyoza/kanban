@@ -40,7 +40,35 @@ func (r *SQLBoardRepository) InsertBoard(ctx context.Context, title string, user
 	return boardID, nil
 }
 
-func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
+func (r *SQLBoardRepository) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT b.id, b.title FROM boards b WHERE user_id = ?;`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query boards: %w", err)
+	}
+	defer rows.Close()
+
+	boards := make([]domain.Board, 0)
+	for rows.Next() {
+		var b domain.Board
+		err := rows.Scan(&b.ID, &b.Title)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		// Append to the slice
+		boards = append(boards, b)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate boards: %w", err)
+	}
+
+	return boards, nil
+}
+
+func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, userID string, boardID string) (*domain.BoardAggregate, error) {
 	query := `
 		SELECT 
 			b.id, b.title,
@@ -49,11 +77,11 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, boardID string) (
 		FROM boards b
 		LEFT JOIN columns c ON b.id = c.board_id
 		LEFT JOIN tasks t ON c.id = t.column_id AND t.is_archived = 0
-		WHERE b.id = ?
+		WHERE b.id = ? AND b.user_id = ?
 		ORDER BY c.position ASC, t.position ASC;
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, boardID)
+	rows, err := r.db.QueryContext(ctx, query, boardID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query board tree: %w", err)
 	}

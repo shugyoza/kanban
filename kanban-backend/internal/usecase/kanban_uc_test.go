@@ -12,7 +12,8 @@ import (
 
 // 1. Define the Mock Repository struct
 type mockBoardRepository struct {
-	getBoardTree func(ctx context.Context, boardID string) (*domain.BoardAggregate, error)
+	getBoardsForUser func(ctx context.Context, userID string) ([]domain.Board, error)
+	getBoardTree func(ctx context.Context, userID, boardID string) (*domain.BoardAggregate, error)
 	updateTaskPositions func(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error
 	insertTask func(ctx context.Context, columnID string, title string, description string) (*domain.Task, error)
 	deleteTask func(ctx context.Context, columnID string, deletedTaskID string, deletedTaskPosition int) error
@@ -28,8 +29,12 @@ func (m *mockBoardRepository) InsertBoard(ctx context.Context, title string, use
 }
 
 // 2. Implement the interface method so it satisfies domain.BoardRepository
-func (m *mockBoardRepository) GetBoardTree(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
-	return m.getBoardTree(ctx, boardID)
+func (m *mockBoardRepository) GetBoardTree(ctx context.Context, userID, boardID string) (*domain.BoardAggregate, error) {
+	return m.getBoardTree(ctx, userID, boardID)
+}
+
+func (m *mockBoardRepository) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {
+	return m.getBoardsForUser(ctx, userID)
 }
 
 func (m *mockBoardRepository) UpdateTaskPositions(ctx context.Context, taskID string, targetColumnID string, targetPosition int) error {
@@ -62,11 +67,12 @@ func (m *mockBoardRepository) GetArchivedTasks(ctx context.Context, boardID stri
 
 // 3. The unit test function
 func TestGetBoardDetails_Success(t *testing.T) {
+	userID := "user-123"
 	targetBoardID := "board-1"
 
 	// Instantiate the mock repo and define its specific behavior for this test case.
 	mockRepo := &mockBoardRepository{
-		getBoardTree: func(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {	
+		getBoardTree: func(ctx context.Context, userID, boardID string) (*domain.BoardAggregate, error) {	
 			return &domain.BoardAggregate{
 				ID: targetBoardID,
 				Title: "Engineering Board",
@@ -97,7 +103,7 @@ func TestGetBoardDetails_Success(t *testing.T) {
 	interactor := NewKanbanInteractor(mockRepo)
 
 	// Act: Call the UseCase method under test.
-	result, err := interactor.GetBoardDetails(context.Background(), targetBoardID)
+	result, err := interactor.GetBoardDetails(context.Background(), userID, targetBoardID)
 
 	// Assert: Validate the output match architectural expectations.
 	if err != nil {
@@ -125,14 +131,15 @@ func TestGetBoardDetails_Success(t *testing.T) {
 }
 
 func TestGetBoardDetails_NotFound(t *testing.T) {
+	userID := "user-123"
 	mockRepo := &mockBoardRepository{
-		getBoardTree: func(ctx context.Context, boardID string) (*domain.BoardAggregate, error) {
+		getBoardTree: func(ctx context.Context, userID, boardID string) (*domain.BoardAggregate, error) {
 			return nil, nil // simulate empty dataset recprd
 		},
 	}
 
 	interactor := NewKanbanInteractor(mockRepo)
-	_, err := interactor.GetBoardDetails(context.Background(), "missing-id")
+	_, err := interactor.GetBoardDetails(context.Background(), userID, "missing-id")
 
 	if err == nil || err.Error() != "board not found" {
 		t.Errorf("Expected strict 'board not found' error exception, received: %v", err)

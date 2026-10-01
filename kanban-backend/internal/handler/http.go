@@ -154,13 +154,6 @@ func (h *KanbanHandler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(CreateBoardResponse{
 		BoardID: boardID,
 	})
-
-	if err != nil {
-		http.Error(w, "Failed to encode response payload", http.StatusInternalServerError)
-
-		return
-	}
-
 }
 
 // GetBoard handles requests matching: GET /api/boards/boards?id=xxx

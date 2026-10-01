@@ -6,18 +6,50 @@
         Connecting to Go backend, loading workspace...
     </div>
     } @else {
-    <h1 class="board-title">
-        {{ board?.title }}
-    </h1>
+    <div class="board-header">
+        @if (titleEdit()) {
+        <input type="text" class="board-title" [value]="board?.title" />
+        <button title="Save changes" (click)="titleEdit.set(!titleEdit())">
+            <span class="material-symbols-outlined">
+                save
+            </span>
+        </button>
+        <button title="Cancel changes" (click)="titleEdit.set(!titleEdit())">
+            <span class="material-symbols-outlined">
+                close
+            </span>
+        </button>
+
+
+        } @else {
+        <h1 class="board-title">
+            {{ board?.title }}
+        </h1>
+        <button title="Edit board title" (click)="titleEdit.set(!titleEdit())">
+            <span class="material-symbols-outlined">
+                edit
+            </span>
+        </button>
+        }
+    </div>
+
 
     <!-- 1. Enforce a broad drop-list grouping boundary across all columns -->
     <div class="columns-wrapper" cdkDropListGroup>
+        <button title="Add a new column">
+            <span class="material-symbols-outlined">
+                add
+            </span>
+        </button>
+
         @for (column of board?.columns; track column.id) {
         @let isFirstColumn = $index === 0;
         @let isNewTask = !kanbanService.taskIdOnEdit();
         <div class="column-card">
             <h2 class="column-title">
-                {{ column.title }}
+                <button>
+                    {{ column.title }}
+                </button>
             </h2>
 
             @if (isFirstColumn && isNewTask && !kanbanService.isEditTaskFormOpen()) {

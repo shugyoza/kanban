@@ -9,6 +9,11 @@ export interface Task {
     isArchived?: boolean;
 }
 
+export interface Board {
+    id: string;
+    title: string;
+}
+
 export interface ColumnAggregate {
     id: string;
     title: string;
@@ -16,9 +21,7 @@ export interface ColumnAggregate {
     tasks: Task[]
 }
 
-export interface BoardAggregate {
-    id: string;
-    title: string;
+export interface BoardAggregate extends Board {
     columns: ColumnAggregate[];
 }
 

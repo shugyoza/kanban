@@ -1,0 +1,9 @@
+<ul>
+    @for (board of boards(); track board.id) {
+        <li>
+            <button (click)="selectBoard(board.id)">
+                {{ board.title }}
+            </button>
+        </li>
+    }
+</ul>

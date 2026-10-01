@@ -3,9 +3,10 @@ import { RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { User } from './models/auth.model';
 import { AddBoardComponent } from './components/add-board.component/add-board.component';
+import { BoardsComponent } from './components/boards.component/boards.component';
 
 @Component({
-  imports: [RouterOutlet, AddBoardComponent],
+  imports: [RouterOutlet, AddBoardComponent, BoardsComponent],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',

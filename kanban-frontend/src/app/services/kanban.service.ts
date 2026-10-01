@@ -1,9 +1,11 @@
 import { HttpClient, HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task, TaskEdit } from '../models/kanban.model';
+import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task, TaskEdit, Board } from '../models/kanban.model';
 import { catchError, Observable, of, tap } from 'rxjs';
 import { form, maxLength, required } from '@angular/forms/signals';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { AuthService } from './auth.service';
+import { User } from '../models/auth.model';
 
 const INITIAL_TASK: TaskEdit = {
     title: '',
@@ -17,14 +19,24 @@ const INITIAL_TASK: TaskEdit = {
 @Service()
 export class KanbanService {
     private readonly http = inject(HttpClient);
-    private readonly boardId = signal<string | null>(null);
+    private readonly authService = inject(AuthService);
     private readonly version = signal<number>(0);
     private readonly archiveVersion = signal<number>(0);
+    private readonly boardsListVersion = signal<number>(0);
+
+    private readonly boardsListResource = rxResource<Board[], { version: number, userId: undefined | string }>({
+        params: () => ({
+            version: this.boardsListVersion(),
+            userId: this.authService.currentUser()?.id
+        }),
+        stream: ({ params }) => this.getBoards(params.userId)
+    })
 
     private readonly boardResource = rxResource<BoardAggregate | null, { id: string | null; version: number }>({
         params: () => ({
             id: this.boardId(),
-            version: this.version()
+            version: this.version(),
+            boardsList: this.boardsListResource.value()
         }),
         stream: ({ params }) => this.getBoard(params.id)
     })
@@ -39,6 +51,8 @@ export class KanbanService {
 
     private readonly localBoardState = signal<BoardAggregate | null>(null);
 
+    public readonly boardId = signal<string | null>(null);
+    public readonly boardsList = computed<Board[]>(() => this.boardsListResource.value() ?? []);
     public readonly archivedTasks = computed<Task[]>(() => this.archivedResource.value() ?? []);
     public readonly isArchiveDrawerOpen = signal<boolean>(false);
     public readonly boardState = computed<BoardAggregate | null>(() => {
@@ -78,7 +92,7 @@ export class KanbanService {
     protected getBoard(boardId: string | null): Observable<BoardAggregate | null> {
         if (!boardId) return of(null);
 
-        return this.http.get<BoardAggregate>(`/api/boards?id=${boardId}`).pipe(
+        return this.http.get<BoardAggregate>(`/api/boards/${boardId}`).pipe(
             catchError(error => {
                 console.error('Data stream resolution failed: ', error);
 
@@ -551,6 +565,12 @@ export class KanbanService {
                 }
             }),
         )
+    }
+
+    public getBoards(userId?: string): Observable<Board[]> {
+        if (!userId) return of([]);
+
+        return this.http.get<Board[]>('/api/boards');
     }
 }
 

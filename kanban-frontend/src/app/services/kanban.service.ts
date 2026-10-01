@@ -1,7 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { BoardAggregate, TaskCreateDTO, TaskUpdateDTO, Task, TaskEdit } from '../models/kanban.model';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, Observable, of, tap } from 'rxjs';
 import { form, maxLength, required } from '@angular/forms/signals';
 import { rxResource } from '@angular/core/rxjs-interop';
 
@@ -22,7 +22,7 @@ export class KanbanService {
     private readonly archiveVersion = signal<number>(0);
 
     private readonly boardResource = rxResource<BoardAggregate | null, { id: string | null; version: number }>({
-        params: () => ({ 
+        params: () => ({
             id: this.boardId(),
             version: this.version()
         }),
@@ -37,7 +37,7 @@ export class KanbanService {
         stream: ({ params }) => this.getArchivedTasks(params.boardId)
     })
 
-    private readonly localBoardState = signal<BoardAggregate | null>(null)
+    private readonly localBoardState = signal<BoardAggregate | null>(null);
 
     public readonly archivedTasks = computed<Task[]>(() => this.archivedResource.value() ?? []);
     public readonly isArchiveDrawerOpen = signal<boolean>(false);
@@ -64,6 +64,16 @@ export class KanbanService {
         required(schemaPath.description, { message: 'Description is required' });
         maxLength(schemaPath.title, 255, { message: 'Maximum 255 characters' })
     });
+
+    public readonly newBoardTitleModel = signal<string>('');
+    public readonly isCreateBoardFormOpen = signal<boolean>(false);
+    public readonly newBoardTitleForm = form(this.newBoardTitleModel, schemaPath => {
+        const maxChars = 100;
+
+        required(schemaPath, { message: 'Title is required' });
+        maxLength(schemaPath, maxChars, { message: `Maximum ${maxChars} characters` })
+    })
+
 
     protected getBoard(boardId: string | null): Observable<BoardAggregate | null> {
         if (!boardId) return of(null);
@@ -522,6 +532,25 @@ export class KanbanService {
                 this.localBoardState.set(null)
             }
         })
+    }
+
+    public submitNewBoardTitle(): Observable<HttpResponse<{
+        boardId: string;
+    }>> {
+        const title = this.newBoardTitleModel()
+
+        return this.http.post<{ boardId: string }>('/api/boards', { title }, { observe: 'response' }
+        ).pipe(
+            tap(response => {
+
+                if (response.status === HttpStatusCode.Created && response.body?.boardId) {
+                    alert(`Successfully created new board with id: ${response.body?.boardId}`);
+
+                    this.newBoardTitleModel.set('');
+                    this.newBoardTitleForm().reset();
+                }
+            }),
+        )
     }
 }
 

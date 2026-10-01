@@ -32,7 +32,7 @@ export class LoginComponent {
     $event.preventDefault();
 
     if (this.loginForm().invalid()) {
-      console.error('invalid login form');
+      alert('invalid login form');
 
       return;
     }

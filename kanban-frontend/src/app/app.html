@@ -1,20 +1,27 @@
-<section class="app-top-bar">
-    <header>
-        @let username = user()?.username;
-        @if (username) {
-        Logged in as: {{ username }}
-        }
-    </header>
-    <nav>
-        @if (!!user()) {
-        <button (click)="logout()">
-            <span class="material-symbols-outlined" title="logout">
-                logout
-            </span>
-        </button>
-        }
-    </nav>
-</section>
-<main #mainContent>
-    <router-outlet></router-outlet>
-</main>
+<div class="app">
+    <section class="left-side-bar">
+        <app-add-board></app-add-board>
+    </section>
+    <section class="right-section">
+        <section class="app-top-bar">
+            <header>
+                @let username = user()?.username;
+                @if (username) {
+                Logged in as: {{ username }}
+                }
+            </header>
+            <nav>
+                @if (!!user()) {
+                <button (click)="logout()">
+                    <span class="material-symbols-outlined" title="logout">
+                        logout
+                    </span>
+                </button>
+                }
+            </nav>
+        </section>
+        <main #mainContent>
+            <router-outlet></router-outlet>
+        </main>
+    </section>
+</div>

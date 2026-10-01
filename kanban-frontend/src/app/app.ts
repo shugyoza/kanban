@@ -2,9 +2,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { User } from './models/auth.model';
+import { AddBoardComponent } from './components/add-board.component/add-board.component';
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, AddBoardComponent],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',

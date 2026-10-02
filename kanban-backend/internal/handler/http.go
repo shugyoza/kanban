@@ -96,6 +96,10 @@ type ArchiveTaskPayload struct {
 	TaskPosition int    `json:"taskPosition"`
 }
 
+type ValueResponse struct {
+	Value string `json:"value"`
+}
+
 // NewKanbanHandler initializes the delivery layer with its required business logic dependency.
 func NewKanbanHandler(uc domain.KanbanUseCase, auc domain.AuthUseCase) *KanbanHandler {
 	return &KanbanHandler{
@@ -825,5 +829,29 @@ func (h *KanbanHandler) ValidateEmailRegistered(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ValidateEmailRegisteredResponse{
 		Registered: isRegistered,
+	})
+}
+
+func (h *KanbanHandler) Encrypt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	password := r.PathValue("password")
+	encryptedPassword, err := h.authUseCase.Encrypt(r.Context(), password)
+	if err != nil {
+		log.Printf("Password encryption process failed: %v", err)
+
+		http.Error(w, "Unable to encrypt password", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(ValueResponse{
+		Value: encryptedPassword,
 	})
 }

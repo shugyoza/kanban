@@ -28,10 +28,9 @@ VALUES ('task-5', 'col-progress', 'Configure Local Workspace Proxy', 'Bridge Ang
 INSERT OR IGNORE INTO tasks (id, column_id, title, description, position) 
 VALUES ('task-6', 'col-done', 'Initialize Git Repository', 'Optimize .gitignore parameters to cleanly ignore macOS spatial logs.', 0);
 
-
 -- Seed a standard developer test account (password_hash represents a mock bcrypt placeholder string)
-INSERT OR IGNORE INTO users (id, username, password_hash) 
-VALUES ('user-dev-123', 'developer', '$2a$10$X7b98KqLmNzR7u8vPq1WWeOdB8yD8eHqJuK3mLeR9X1yZn2aBcDeF');
+INSERT OR IGNORE INTO users (id, username, password_hash, email) 
+VALUES ('user-dev-123', 'shanjaya', '$2a$10$PMTNBNLL1eCztRxvukDM1ur.X0wDuLWU37pl3l.fMY7Ew5Y2kUeX.', 'shanjaya@example.com'); --12345678
 
 -- Link your existing board baseline to our fresh user profile record
 UPDATE boards SET owned_by = 'shanjaya' WHERE id = 'board-kanban-1';

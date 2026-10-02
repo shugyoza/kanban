@@ -265,3 +265,13 @@ func (uc *AuthInteractor) GetUserByEmail(ctx context.Context, email string) (*do
 
 	return u, nil;
 }
+
+func (uc *AuthInteractor) Encrypt(ctx context.Context, password string) (string, error) {
+	// encrypt password
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("cryptographic failure: failed to securely salt user password: %w", err)
+	}
+
+	return string(bytes), nil
+}

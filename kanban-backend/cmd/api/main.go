@@ -110,6 +110,8 @@ func main() {
 	http.HandleFunc("POST /api/auth/register", kanbanHandler.Register)
 	http.HandleFunc("GET /api/auth/me", kanbanHandler.Authenticate)
 
+	http.HandleFunc("GET /api/encrypt/{password}", kanbanHandler.Encrypt) // For testing only, not for production use. In production, password encryption should be handled securely during user registration or password change processes.
+
 	serverPort := ":8080"
 	if os.Getenv("PORT") != "" {
 		serverPort = os.Getenv("PORT")

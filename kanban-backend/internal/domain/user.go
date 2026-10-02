@@ -55,4 +55,5 @@ type AuthUseCase interface {
 	ValidateEmail(ctx context.Context, email string) (string, string, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	IsEmailRegistered(ctx context.Context, email string) (bool, error)
+	Encrypt(ctx context.Context, password string) (string, error)
 }

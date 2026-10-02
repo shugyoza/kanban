@@ -63,6 +63,8 @@ type CreateBoardResponse struct {
 	BoardID string `json:"boardId"`
 }
 
+type UpdateBoardPayload = CreateBoardPayload
+
 // MoveTaskPayload defines the strict JSON contract from the frontend
 type MoveTaskPayload struct {
 	TaskID         string `json:"taskId"`
@@ -100,6 +102,63 @@ func NewKanbanHandler(uc domain.KanbanUseCase, auc domain.AuthUseCase) *KanbanHa
 		useCase:     uc,
 		authUseCase: auc,
 	}
+}
+
+func (h *KanbanHandler) UpdateBoard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	cookie, err := r.Cookie("kanban_session")
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "Session cookie not found", http.StatusBadRequest)
+
+		return
+	}
+
+	sessionID := cookie.Value
+	user, err := h.authUseCase.AuthenticateSession(r.Context(), sessionID)
+	if err != nil {
+		log.Printf("Session validation failed: %v", err)
+		http.Error(w, "Unauthorized session bounds", http.StatusUnauthorized)
+
+		return
+	}
+
+	boardID := r.PathValue("id")
+	var payload UpdateBoardPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Malformed JSON request body", http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	err = h.useCase.UpdateBoard(r.Context(), boardID, payload.Title, user.ID)
+	if err != nil {
+		log.Printf("Error executing board update workflow: %v", err)
+
+		if strings.Contains(err.Error(), "business rule violation") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+
+			return
+		}
+
+
+		http.Error(w, "Internal server creation failure", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *KanbanHandler) CreateBoard(w http.ResponseWriter, r *http.Request) {

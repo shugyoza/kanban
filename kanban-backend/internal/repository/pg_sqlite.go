@@ -40,6 +40,29 @@ func (r *SQLBoardRepository) InsertBoard(ctx context.Context, title string, user
 	return boardID, nil
 }
 
+func (r *SQLBoardRepository) UpdateBoard(ctx context.Context, boardID, title, userID string) error {
+	result, err := r.db.ExecContext(
+		ctx,
+		`UPDATE boards SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?;`,
+		title, boardID, userID,
+	)
+	if err != nil {
+
+		return fmt.Errorf("failed to execute update board query: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to verify update update board affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("not found, board with ID: %s and user ID: %s", boardID, userID)
+	}
+
+	return nil
+}
+
 func (r *SQLBoardRepository) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {
 	rows, err := r.db.QueryContext(
 		ctx,

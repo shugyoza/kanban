@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"kanban-backend/internal/domain"
+	"strings"
 )
 
 type KanbanInteractor struct {
@@ -48,6 +49,29 @@ func (uc *KanbanInteractor) CreateBoard(ctx context.Context, title string, userI
 	}
 
 	return boardID, nil
+}
+
+func (uc *KanbanInteractor) UpdateBoard(ctx context.Context, boardID, title, userID string) error {
+	if boardID == "" {
+		return fmt.Errorf("business rule violation: board ID cannot be empty")
+	}
+
+	if userID == "" {
+		return fmt.Errorf("business rule violation: userID is mandatory for updating a board")
+	}
+
+	trimmedTitle := strings.TrimSpace(title)
+	if trimmedTitle == "" {
+		return fmt.Errorf("business rule violation: board title cannot be empty")
+	}
+
+	err := uc.repo.UpdateBoard(ctx, boardID, trimmedTitle, userID)
+	if err != nil {
+
+		return fmt.Errorf("UpdateBoard usecase failed to update board: %w", err)
+	}
+
+	return nil
 }
 
 func (uc *KanbanInteractor) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {

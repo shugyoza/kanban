@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS
     id VARCHAR(36) PRIMARY KEY, -- UUID for board identification
     title VARCHAR(100) NOT NULL,
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
 -- 2. Columns Table (To Do, In Progress, Done)

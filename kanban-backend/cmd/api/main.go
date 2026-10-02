@@ -88,6 +88,7 @@ func main() {
 
 	// Map handler's method to a real web URL path endpoint
 	http.HandleFunc("GET /api/boards/{id}", kanbanHandler.GetBoardTreeById)
+	http.HandleFunc("PATCH /api/boards/{id}", kanbanHandler.UpdateBoard)
 	http.HandleFunc("GET /api/boards", kanbanHandler.GetBoardsForUser)
 	http.HandleFunc("POST /api/boards", kanbanHandler.CreateBoard)
 

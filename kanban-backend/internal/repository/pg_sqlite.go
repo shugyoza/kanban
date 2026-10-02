@@ -28,8 +28,8 @@ func (r *SQLBoardRepository) InsertBoard(ctx context.Context, title string, user
 
 	_, err := r.db.ExecContext(
 		ctx,
-		`INSERT INTO boards (id, title, user_id, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP);`,
-		boardID, title, userID,
+		`INSERT INTO boards (id, title, owned_by, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
+		boardID, title, userID, userID, userID,
 	)
 
 	if err != nil {
@@ -43,8 +43,8 @@ func (r *SQLBoardRepository) InsertBoard(ctx context.Context, title string, user
 func (r *SQLBoardRepository) UpdateBoard(ctx context.Context, boardID, title, userID string) error {
 	result, err := r.db.ExecContext(
 		ctx,
-		`UPDATE boards SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?;`,
-		title, boardID, userID,
+		`UPDATE boards SET title = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ? WHERE id = ? AND owned_by = ?;`,
+		title, userID, boardID, userID,
 	)
 	if err != nil {
 
@@ -66,7 +66,7 @@ func (r *SQLBoardRepository) UpdateBoard(ctx context.Context, boardID, title, us
 func (r *SQLBoardRepository) GetBoardsForUser(ctx context.Context, userID string) ([]domain.Board, error) {
 	rows, err := r.db.QueryContext(
 		ctx,
-		`SELECT b.id, b.title FROM boards b WHERE user_id = ?;`,
+		`SELECT b.id, b.title FROM boards b WHERE owned_by = ?;`,
 		userID,
 	)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *SQLBoardRepository) GetBoardTree(ctx context.Context, userID string, bo
 		FROM boards b
 		LEFT JOIN columns c ON b.id = c.board_id
 		LEFT JOIN tasks t ON c.id = t.column_id AND t.is_archived = 0
-		WHERE b.id = ? AND b.user_id = ?
+		WHERE b.id = ? AND b.owned_by = ?
 		ORDER BY c.position ASC, t.position ASC;
 	`
 

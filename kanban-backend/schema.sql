@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS
   boards (
     id VARCHAR(36) PRIMARY KEY, -- UUID for board identification
     title VARCHAR(100) NOT NULL,
-    user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+    owned_by TEXT REFERENCES users(id) ON DELETE CASCADE,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );

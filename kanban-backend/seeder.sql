@@ -1,5 +1,5 @@
 -- seed a mock board to test pulling real data
-INSERT OR IGNORE INTO boards (id, title) VALUES ('board-kanban-1', 'Kanban Board 1');
+INSERT OR IGNORE INTO boards (id, title, owned_by, created_by, updated_by) VALUES ('board-kanban-1', 'Kanban Board 1', 'shanjaya', 'shanjaya', 'shanjaya');
 
 -- 2. Columns (Positions 0, 1, 2 build out the horizontal lanes)
 INSERT OR IGNORE INTO columns (id, board_id, title, position) VALUES ('col-todo', 'board-kanban-1', 'To Do', 0);
@@ -34,4 +34,4 @@ INSERT OR IGNORE INTO users (id, username, password_hash)
 VALUES ('user-dev-123', 'developer', '$2a$10$X7b98KqLmNzR7u8vPq1WWeOdB8yD8eHqJuK3mLeR9X1yZn2aBcDeF');
 
 -- Link your existing board baseline to our fresh user profile record
-UPDATE boards SET user_id = 'user-dev-123' WHERE id = 'board-kanban-1';
+UPDATE boards SET owned_by = 'shanjaya' WHERE id = 'board-kanban-1';
